@@ -4,5 +4,6 @@ RUN apk add --no-cache build-base
 COPY Gemfile ./
 RUN bundle install
 COPY . .
+USER 10001:10001
 EXPOSE 8000
 CMD ["bundle","exec","rackup","-o","0.0.0.0","-p","8000"]
