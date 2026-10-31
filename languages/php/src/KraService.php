@@ -39,7 +39,7 @@ final class KraService {
   $path=$this->servicePaths[$service]??null;
   if(!is_string($path)||!str_starts_with($path,'/')||str_starts_with($path,'//'))return [501,['error'=>['code'=>'service_not_configured','message'=>'No verified KRA endpoint mapping configured']]];
   $method=strtoupper($this->serviceMethods[$service]??'POST');
-  if(!in_array($method,['GET','POST'],true))return [500,['detail'=>'Only GET and POST mappings are supported']];
+  if($method!=='POST')return [501,['detail'=>'Catalog operations currently require POST; configure the official KRA method before use']];
   $upstreamBase=$service==='etims-oscu-integrator-automated-testing'?(getenv('KRA_ETIMS_BASE_URL')?:''):$this->base;
   $parts=parse_url($upstreamBase);
   if(!is_array($parts)||($parts['scheme']??'')!=='https'||!str_ends_with((string)($parts['host']??''),'.kra.go.ke'))return [501,['error'=>['code'=>'service_base_not_configured','message'=>'Set a verified HTTPS KRA base URL for this service']]];
