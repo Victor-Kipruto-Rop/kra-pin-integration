@@ -153,7 +153,7 @@ class KraClient:
         paths = json.loads(os.environ.get("KRA_SERVICE_PATHS_JSON", "{}"))
         methods = json.loads(os.environ.get("KRA_SERVICE_METHODS_JSON", "{}"))
         if service_id == "authorization":
-            return {"access_token": await self._token(self._s.pin_key, self._s.pin_secret), "token_type": "Bearer"}
+            await self._token(self._s.pin_key, self._s.pin_secret)\n            return {"authorized": True, "token_type": "Bearer"}
         path = paths.get(service_id)
         if not isinstance(path, str) or not path.startswith("/") or path.startswith("//"):
             raise KraError(501, "service_not_configured", "No verified KRA endpoint mapping configured")
