@@ -13,13 +13,12 @@ for arg in "$@"; do
     --validation-only) ONLY_VALIDATION=1 ;;
     -h|--help)
       cat <<'USAGE'
-Usage: scripts/ci-local.sh [--skip-install] [--validation-only]
+Usage: bash scripts/ci-local.sh [--skip-install] [--validation-only]
 
 Default: install test dependencies and run catalog/OSCU validation plus
 Python, Go, Java, JavaScript, TypeScript, PHP and Ruby test suites.
 --skip-install: use already-installed dependencies.
---validation-only: run static catalog/contract/config validation and Python
-                   syntax compilation without requiring all language runtimes.
+--validation-only: run static contract validation and Python syntax compilation.
 USAGE
       exit 0
       ;;
@@ -39,7 +38,6 @@ step "Static catalog and contract validation"
 require python3
 python3 scripts/validate-catalog.py
 python3 scripts/validate-oscu-contract.py
-python3 scripts/validate-production-config.py --help >/dev/null 2>&1 || true
 python3 -m py_compile \
   scripts/validate-catalog.py \
   scripts/validate-oscu-contract.py \
@@ -55,7 +53,6 @@ if [[ "$ONLY_VALIDATION" -eq 1 ]]; then
 fi
 
 step "Python reference API and Python OSCU SDK"
-require python3
 if [[ "$SKIP_INSTALL" -eq 0 ]]; then
   python3 -m pip install -r server/requirements-dev.txt
   python3 -m pip install -r languages/python/requirements.txt
@@ -70,18 +67,12 @@ fi
 
 step "Go"
 require go
-(
-  cd languages/go
-  go test ./...
-)
+(cd languages/go && go test ./...)
 
 step "Java"
 require java
 require mvn
-(
-  cd languages/java
-  mvn -B test
-)
+(cd languages/java && mvn -B test)
 
 step "JavaScript"
 require node
@@ -123,6 +114,7 @@ require bundle
 step "Docker Compose configuration"
 if command -v docker >/dev/null 2>&1; then
   docker compose config --quiet
+  docker compose -f docker-compose.multilang.yml config --quiet
 else
   echo "Docker is not installed; compose validation was not run." >&2
 fi
