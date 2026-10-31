@@ -17,7 +17,7 @@ class KraPinApp
   key=req.get_header('HTTP_X_API_KEY').to_s;valid=@keys.any?{|x|x.bytesize==key.bytesize&&secure_equal(x,key)};return reply(401,{detail:'Invalid or missing X-API-Key'}) unless valid
   return reply(429,{detail:'Rate limit exceeded'}) unless rate(key)
   begin
-   b=JSON.parse(req.body.read);id=path.end_with?('verify-by-id');return reply(400,{detail:'consent must be true'}) if ENV.fetch('REQUIRE_CONSENT','true')!='false'&&b['consent']!=true
+   raw=req.body.read(65_537);return reply(413,{detail:'Request too large'}) if raw.bytesize>65_536;b=JSON.parse(raw.empty? ? '{}' : raw);return reply(422,{detail:'JSON object required'}) unless b.is_a?(Hash);id=path.end_with?('verify-by-id');return reply(400,{detail:'consent must be true'}) if ENV.fetch('REQUIRE_CONSENT','true')!='false'&&b['consent']!=true
    value=(id ? b['taxpayer_id'] : b['pin']).to_s.strip.upcase;return reply(422,{detail:'Invalid identifier format'}) if value.length<(id ? 5 : 9)||value.length>20||value !~ /\A[A-Z0-9]+\z/
    reply(200,lookup(id,value,(b['taxpayer_type']||'KE').upcase))
   rescue JSON::ParserError;reply(422,{detail:'Invalid JSON'})
