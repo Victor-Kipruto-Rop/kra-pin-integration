@@ -2,7 +2,11 @@
 
 ## Delivered on `feature/multilanguage-sdk-expansion`
 - Independent Go, Java/Spring Boot, JavaScript, TypeScript, PHP and Ruby service templates alongside the Python reference.
-- Shared OpenAPI contract and canonical 22-service catalog with stable service IDs and mutability metadata.\n- Generic POST /v1/kra/{service-id} dispatcher in Python, Go, Java, JavaScript, TypeScript, PHP and Ruby.\n- Configurable upstream path/method mappings, OAuth token handling, one-time 401 refresh/retry, consent enforcement and idempotency-key requirements for mutating operations.\n- Separate configurable HTTPS KRA base URL for the eTIMS OSCU integration.\n- Per-language tests asserting the 22-service catalog is present.
+- Shared OpenAPI contract and canonical 22-service catalog with stable service IDs and mutability metadata.
+- Generic POST /v1/kra/{service-id} dispatcher in Python, Go, Java, JavaScript, TypeScript, PHP and Ruby.
+- Configurable upstream path/method mappings, OAuth token handling, one-time 401 refresh/retry, consent enforcement and idempotency-key requirements for mutating operations.
+- Separate configurable HTTPS KRA base URL for the eTIMS OSCU integration.
+- Per-language tests asserting the 22-service catalog is present.
 - Multi-language CI workflow with manual dispatch and read-only repository permissions.
 - Dependabot coverage for Python, Go, Java, JavaScript, TypeScript, PHP, Ruby and GitHub Actions.
 - Docker ignore rules to exclude local environment files and build artifacts from build contexts.
