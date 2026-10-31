@@ -10,6 +10,7 @@ import (
  "io"
  "log"
  "net/http"
+ "net/url"
  "os"
  "strings"
  "sync"
@@ -17,7 +18,7 @@ import (
 )
 
 type Config struct {
- Env, Base, Key, Secret string
+ Env, Base, Key, Secret, EtimsBase string
  Mock, Consent bool
  APIKeys []string
  Paths, Methods map[string]string
@@ -43,7 +44,7 @@ func loadConfig() Config {
  e:=env("KRA_ENVIRONMENT","sandbox")
  if e!="sandbox"&&e!="production" { log.Fatal("KRA_ENVIRONMENT must be sandbox or production") }
  base:="https://sbx.kra.go.ke"; if e=="production" { base="https://api.kra.go.ke" }
- c:=Config{Env:e,Base:base,Key:os.Getenv("KRA_PIN_CONSUMER_KEY"),Secret:os.Getenv("KRA_PIN_CONSUMER_SECRET"),Mock:env("KRA_MOCK","true")=="true",Consent:env("REQUIRE_CONSENT","true")!="false",APIKeys:strings.Split(os.Getenv("PROXY_API_KEYS"),",")}
+ c:=Config{Env:e,Base:base,EtimsBase:os.Getenv("KRA_ETIMS_BASE_URL"),Key:os.Getenv("KRA_PIN_CONSUMER_KEY"),Secret:os.Getenv("KRA_PIN_CONSUMER_SECRET"),Mock:env("KRA_MOCK","true")=="true",Consent:env("REQUIRE_CONSENT","true")!="false",APIKeys:strings.Split(os.Getenv("PROXY_API_KEYS"),",")}
  if c.Mock&&e=="production" { log.Fatal("mock mode forbidden in production") }
  if !c.Mock&&(c.Key==""||c.Secret=="") { log.Fatal("KRA credentials required when mock mode is disabled") }
  valid:=false;for _,k:=range c.APIKeys { if strings.TrimSpace(k)!="" { valid=true } };if !valid { log.Fatal("PROXY_API_KEYS required") }
@@ -70,8 +71,9 @@ func invoke(c Config,client *http.Client,service string,payload map[string]any)(
  if service=="authorization" { tok,err:=getToken(c,client);if err!=nil{return 0,nil,err};return 200,map[string]any{"access_token":tok,"token_type":"Bearer"},nil }
  path:=c.Paths[service];if path==""||!strings.HasPrefix(path,"/")||strings.HasPrefix(path,"//"){return 501,map[string]any{"error":map[string]string{"code":"service_not_configured","message":"No verified KRA endpoint mapping configured"}},nil}
  method:=strings.ToUpper(c.Methods[service]);if method==""{method="POST"};if method!="GET"&&method!="POST"{return 500,nil,fmt.Errorf("unsupported configured HTTP method")}
+ upstreamBase:=c.Base;if service=="etims-oscu-integrator-automated-testing"{upstreamBase=c.EtimsBase};parsed,parseErr:=url.Parse(upstreamBase);if parseErr!=nil||parsed.Scheme!="https"||parsed.Host==""||!strings.HasSuffix(parsed.Hostname(),".kra.go.ke"){return 501,map[string]string{"code":"service_base_not_configured","message":"Set a verified HTTPS KRA base URL for this service"},nil}
  tok,err:=getToken(c,client);if err!=nil{return 0,nil,err}
- send:=func(token string)(*http.Response,error){var body io.Reader;if method=="POST"{b,e:=json.Marshal(payload);if e!=nil{return nil,e};body=bytes.NewReader(b)};req,e:=http.NewRequest(method,c.Base+path,body);if e!=nil{return nil,e};req.Header.Set("Authorization","Bearer "+token);if method=="POST"{req.Header.Set("Content-Type","application/json")};return client.Do(req)}
+ send:=func(token string)(*http.Response,error){var body io.Reader;if method=="POST"{b,e:=json.Marshal(payload);if e!=nil{return nil,e};body=bytes.NewReader(b)};req,e:=http.NewRequest(method,upstreamBase+path,body);if e!=nil{return nil,e};req.Header.Set("Authorization","Bearer "+token);if method=="POST"{req.Header.Set("Content-Type","application/json")};return client.Do(req)}
  resp,err:=send(tok);if err!=nil{return 0,nil,err};if resp.StatusCode==401{resp.Body.Close();tokenCache.Lock();delete(tokenCache.m,c.Key);tokenCache.Unlock();tok,err=getToken(c,client);if err!=nil{return 0,nil,err};resp,err=send(tok);if err!=nil{return 0,nil,err}}
  defer resp.Body.Close();raw,err:=io.ReadAll(io.LimitReader(resp.Body,2<<20));if err!=nil{return 0,nil,err};var result any;if len(raw)>0{if err=json.Unmarshal(raw,&result);err!=nil{return 502,map[string]string{"code":"invalid_upstream_response","message":"KRA returned non-JSON content"},nil}}
  if resp.StatusCode==429{return 429,result,nil};if resp.StatusCode>=400{return 502,map[string]any{"error":map[string]any{"code":"kra_upstream_error","message":"KRA service request failed","upstream_status":resp.StatusCode}},nil};return 200,result,nil
