@@ -140,3 +140,23 @@ def test_catalog_idempotency_replays_same_payload_and_rejects_conflicts():
     assert first.status_code == replay.status_code == 200
     assert conflict.status_code == 409
     assert fake.calls == 1
+
+
+def test_production_requires_shared_idempotency_store():
+    with pytest.raises(ConfigError, match="IDEMPOTENCY_REDIS_URL"):
+        validate_settings(Settings(
+            environment="production",
+            pin_key="consumer",
+            pin_secret="secret",
+            proxy_api_keys=("production-key",),
+        ))
+
+
+def test_production_accepts_configured_shared_idempotency_store():
+    validate_settings(Settings(
+        environment="production",
+        pin_key="consumer",
+        pin_secret="secret",
+        proxy_api_keys=("production-key",),
+        idempotency_redis_url="rediss://redis.example.invalid:6379/0",
+    ))
