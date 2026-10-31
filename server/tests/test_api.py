@@ -115,6 +115,6 @@ def test_local_dev_can_run_unauthenticated():
     'import-certificate-checker-by-cert-number','invoice-checker','etims-oscu-integrator-automated-testing',
 ])
 def test_all_catalog_routes_are_registered_in_mock_mode(client, service_id):
-    response = client.post(f'/v1/kra/{service_id}', json={'consent': True, 'payload': {}}, headers=KEY)
+    response = client.post(f'/v1/kra/{service_id}', json={'consent': True, 'payload': {}}, headers={**KEY, 'Idempotency-Key': 'test-idempotency-key-0001'})
     assert response.status_code == 501
     assert 'mock' in response.text.lower() or 'mapping' in response.text.lower()
