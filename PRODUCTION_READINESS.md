@@ -1,0 +1,50 @@
+# Production readiness assessment
+
+> **Current release classification: NOT PRODUCTION READY — validation required.**
+
+This project provides independent language templates for KRA PIN Checker integrations. It is not a KRA-certified product and this repository does not establish that KRA has approved any specific deployment.
+
+## Release gates
+
+A release may be marked production-ready only when every gate below has recorded evidence for the exact commit being released.
+
+| Gate | Required evidence | Current state |
+|---|---|---|
+| Runtime builds | Clean build for Python, Go, Java, JavaScript, TypeScript, PHP and Ruby | Not verified |
+| Automated tests | All unit, integration, contract and negative tests pass | Not verified |
+| Contract parity | All runtimes pass the same OpenAPI contract suite | Not verified |
+| KRA sandbox | Approved credentials; success, not-found, invalid-input, expired-token and upstream-error cases captured with sensitive data redacted | Not verified |
+| KRA production approval | KRA production access granted for the application and APIs in use | Not verified |
+| Secrets | Production secrets stored in secret manager, rotated, least-privilege, never committed | Deployment-specific |
+| Privacy | Lawful basis, consent wording, retention, data-subject process and Data Protection Act review approved | Not verified |
+| Security | SAST, dependency, container and secret scans pass; independent security review completed | Not verified |
+| Operations | TLS, monitoring, alerting, incident response, backups and tested recovery | Deployment-specific |
+| Scale | Shared rate limiting/token strategy; load and concurrency tests pass | Not verified |
+| Release control | Protected branch, reviewed PR, passing CI and approved production environment | Not verified |
+
+## What this repository currently does not prove
+
+- A mock lookup is not a real KRA API call.
+- A green local test is not KRA certification or production approval.
+- The KRA endpoint hosts, response fields, not-found codes and authentication behavior must be confirmed against the current official developer documentation and sandbox.
+- In-memory caches and rate limiters do not coordinate across replicas.
+- A local PHP temporary-file rate limiter is not a distributed production rate limiter.
+- A PIN lookup result is not identity proof, tax compliance proof or a Tax Compliance Certificate.
+
+## Required sign-off record
+
+For each release, attach the commit SHA and evidence for:
+1. CI workflow run URLs and all seven runtime test results.
+2. OpenAPI contract test report.
+3. KRA sandbox test report with credentials, PINs, taxpayer IDs and personal data redacted.
+4. KRA production approval reference (do not publish confidential approval documents).
+5. Security scan reports and remediation sign-off.
+6. Privacy/legal review sign-off.
+7. Deployment architecture, monitoring and recovery test.
+8. Named release approver and release date.
+
+## Safe deployment posture
+
+Run one language implementation per deployment. Set `KRA_ENVIRONMENT=production`, `KRA_MOCK=false`, use separately approved production credentials, terminate TLS at a trusted ingress, and store `PROXY_API_KEYS` in a secret manager. Do not expose consumer credentials to clients. Do not deploy this template unchanged as a multi-replica service until shared rate limiting and token coordination are configured.
+
+**Do not change this assessment to “Production Ready” until all gates are evidenced for the release commit.**
