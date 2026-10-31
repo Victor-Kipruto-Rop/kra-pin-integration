@@ -39,14 +39,15 @@ final class KraService {
   if($service==='authorization'){$this->token($key,$secret);return [200,['authorized'=>true,'token_type'=>'Bearer']];}
   $path=$this->servicePaths[$service]??null;
   if(!is_string($path)||!str_starts_with($path,'/')||str_starts_with($path,'//'))return [501,['error'=>['code'=>'service_not_configured','message'=>'No verified KRA endpoint mapping configured']]];
+  $mutating=in_array($service,['tax-compliance-certificate-application','nil-return-filing','tot-return-filing','income-tax-withholding-prn-generation','vat-withholding-prn-generation','rental-withholding-prn-generation','etims-oscu-integrator-automated-testing'],true);
   $method=strtoupper($this->serviceMethods[$service]??'POST');
-  if(!in_array($method,['GET','POST'],true)||($method==='GET'&&in_array($service,['tax-compliance-certificate-application','nil-return-filing','tot-return-filing','income-tax-withholding-prn-generation','vat-withholding-prn-generation','rental-withholding-prn-generation','etims-oscu-integrator-automated-testing'],true)))return [501,['detail'=>'Unsupported or unsafe configured HTTP method']];
+  if(!in_array($method,['GET','POST'],true)||($method==='GET'&&$mutating))return [501,['detail'=>'Unsupported or unsafe configured HTTP method']];
   $upstreamBase=$this->base;
   $parts=parse_url($upstreamBase);
   if(!is_array($parts)||($parts['scheme']??'')!=='https'||!str_ends_with((string)($parts['host']??''),'.kra.go.ke'))return [501,['error'=>['code'=>'service_base_not_configured','message'=>'Set a verified HTTPS KRA base URL for this service']]];
   $access=$this->token($key,$secret);
   [$status,$data]=$this->request(rtrim($upstreamBase,'/').$path,['Authorization: Bearer '.$access],$payload,$method);
-  if($status===401){$access=$this->token($key,$secret,true);[$status,$data]=$this->request(rtrim($upstreamBase,'/').$path,['Authorization: Bearer '.$access],$payload,$method);}
+  if($status===401&&!$mutating){$access=$this->token($key,$secret,true);[$status,$data]=$this->request(rtrim($upstreamBase,'/').$path,['Authorization: Bearer '.$access],$payload,$method);}
   if($status>=400)return [$status===429?429:502,['error'=>['code'=>'kra_upstream_error','message'=>'KRA service request failed']]];
   return [200,$data];
  }
