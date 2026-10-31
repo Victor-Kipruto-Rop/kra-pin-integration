@@ -1,0 +1,49 @@
+name: Multi-language CI
+on:
+  push:
+    paths: ['languages/**','contracts/**','.github/workflows/multilang.yml']
+  pull_request:
+    paths: ['languages/**','contracts/**','.github/workflows/multilang.yml']
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: {go-version: '1.22'}
+      - run: cd languages/go && go test ./...
+  java:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '21', cache: maven}
+      - run: cd languages/java && mvn -B test
+  javascript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '20'}
+      - run: cd languages/javascript && npm test
+  typescript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '20'}
+      - run: cd languages/typescript && npm install && npm test
+  php:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with: {php-version: '8.3', extensions: curl}
+      - run: cd languages/php && composer install --no-interaction && composer test
+  ruby:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with: {ruby-version: '3.3', bundler-cache: true, working-directory: languages/ruby}
+      - run: cd languages/ruby && bundle exec rspec
