@@ -14,7 +14,6 @@ from .config import Settings, load_settings, validate_settings
 from .kra_client import KraClient, KraError, MockKraClient, PinResult
 from .idempotency import MemoryIdempotencyStore, RedisIdempotencyStore
 from .oscu_client import DirectOscuClient
-from .ratelimit import RateLimiter
 from .schemas import PinByIdRequest, PinVerifyRequest, VerifyResponse, normalize_pin
 from .security import api_key_matches, mask_pin
 
@@ -24,7 +23,6 @@ log = logging.getLogger("kra_pin")
 def create_app(settings: Settings | None = None, client=None, oscu_client=None, idempotency_store=None) -> FastAPI:
     settings = settings or load_settings()
     validate_settings(settings)
-    limiter = RateLimiter(settings.rate_limit_per_minute)
     store = idempotency_store or (RedisIdempotencyStore(settings.idempotency_redis_url, settings.idempotency_encryption_key, settings.idempotency_ttl_seconds) if settings.idempotency_redis_url else MemoryIdempotencyStore())
     service_mutates = {"authorization": False, "pin-checker-by-pin": False, "pin-checker-by-id": False, "fetch-taxpayer-obligations": False, "know-kra-tax-service-office": False, "tax-compliance-certificate-application": True, "tax-compliance-certificate-checker": False, "vat-exemption-checker": False, "it-exemption-checker": False, "nil-return-filing": True, "tot-return-filing": True, "income-tax-withholding-prn-generation": True, "vat-withholding-prn-generation": True, "rental-withholding-prn-generation": True, "excise-license-checker-by-pin": False, "excise-license-checker-by-certificate-number": False, "customs-declaration-status-checker": False, "customs-tax-calculator": False, "import-certificate-checker-by-pin": False, "import-certificate-checker-by-cert-number": False, "invoice-checker": False, "etims-oscu-integrator-automated-testing": True}
     kra = client or (MockKraClient() if settings.mock else KraClient(settings))
@@ -58,10 +56,15 @@ def create_app(settings: Settings | None = None, client=None, oscu_client=None, 
         if settings.proxy_api_keys:
             if not x_api_key or not api_key_matches(x_api_key, settings.proxy_api_keys):
                 raise HTTPException(status_code=401, detail="Invalid or missing X-API-Key")
-            identity = hashlib.sha256(x_api_key.encode()).hexdigest()[:16]
+            identity = hashlib.sha256(x_api_key.encode()).hexdigest()
         else:
             identity = request.client.host if request.client else "anonymous"
-        if not limiter.allow(identity):
+        try:
+            allowed = await store.allow_rate_limit(identity, settings.rate_limit_per_minute)
+        except Exception as exc:
+            log.error("rate_limit_store_unavailable")
+            raise HTTPException(status_code=503, detail="Security storage is unavailable") from exc
+        if not allowed:
             raise HTTPException(
                 status_code=429, detail="Rate limit exceeded", headers={"Retry-After": "60"}
             )
@@ -138,6 +141,14 @@ def create_app(settings: Settings | None = None, client=None, oscu_client=None, 
     @app.get("/health", tags=["meta"])
     async def health() -> dict:
         return {"status": "ok", "environment": settings.environment, "mock": settings.mock}
+
+    @app.get("/ready", tags=["meta"])
+    async def ready() -> dict:
+        try:
+            await store.ping()
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="Security storage is unavailable") from exc
+        return {"status": "ready"}
 
     @app.post("/v1/pin/verify", response_model=VerifyResponse, tags=["pin"])
     async def verify_pin(body: PinVerifyRequest, identity: str = Depends(guard)) -> VerifyResponse:
