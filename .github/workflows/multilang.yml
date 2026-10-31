@@ -30,8 +30,15 @@ jobs:
         working-directory: server
       - run: ruff check .
         working-directory: server
-      - run: PYTHONPATH=. pytest -q
+      - run: mkdir -p reports && PYTHONPATH=. pytest -q --junitxml=reports/python-junit.xml
         working-directory: server
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: python-junit-report
+          path: server/reports/python-junit.xml
+          if-no-files-found: ignore
+          retention-days: 14
   go:
     runs-on: ubuntu-latest
     steps:
@@ -46,6 +53,13 @@ jobs:
       - uses: actions/setup-java@v4
         with: {distribution: temurin, java-version: '21', cache: maven}
       - run: cd languages/java && mvn -B test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: java-junit-reports
+          path: languages/java/target/surefire-reports/*.xml
+          if-no-files-found: ignore
+          retention-days: 14
   javascript:
     runs-on: ubuntu-latest
     steps:
@@ -56,18 +70,21 @@ jobs:
   typescript:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: {node-version: '20'}
       - run: cd languages/typescript && npm install --no-audit --no-fund && npm test
   php:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with: {php-version: '8.3', extensions: curl}
       - run: cd languages/php && composer install --no-interaction --prefer-dist && composer test
   ruby:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ruby/setup-ruby@v1
         with: {ruby-version: '3.3', bundler-cache: true, working-directory: languages/ruby}
       - run: cd languages/ruby && bundle exec rspec
