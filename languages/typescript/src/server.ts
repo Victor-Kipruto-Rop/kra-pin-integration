@@ -1,7 +1,7 @@
 import http from 'node:http';import {createHash,timingSafeEqual} from 'node:crypto';import {pathToFileURL} from 'node:url';
 type Result={found:boolean;pin:string|null;taxpayer_name:string|null;environment:string;mock:boolean;raw:null};
 const env=process.env.KRA_ENVIRONMENT??'sandbox',mock=(process.env.KRA_MOCK??'true')==='true',base=env==='production'?'https://api.kra.go.ke':'https://sbx.kra.go.ke',keys=(process.env.PROXY_API_KEYS??'').split(',').map(x=>x.trim()).filter(Boolean),cache=new Map<string,{value:string;exp:number}>(),hits=new Map<string,number[]>();
-if(mock&&env==='production')throw Error('Mock mode forbidden in production');if(!keys.length)throw Error('PROXY_API_KEYS required');
+if(!['sandbox','production'].includes(env))throw Error('KRA_ENVIRONMENT must be sandbox or production');if(mock&&env==='production')throw Error('Mock mode forbidden in production');if(!mock&&(!process.env.KRA_PIN_CONSUMER_KEY||!process.env.KRA_PIN_CONSUMER_SECRET))throw Error('KRA credentials required when mock mode is disabled');if(!keys.length)throw Error('PROXY_API_KEYS required');
 const send=(r:http.ServerResponse,s:number,d:unknown)=>{r.writeHead(s,{'content-type':'application/json'});r.end(JSON.stringify(d));};
 const auth=(k:string|undefined)=>!!k&&keys.some(v=>Buffer.byteLength(v)===Buffer.byteLength(k)&&timingSafeEqual(Buffer.from(v),Buffer.from(k)));
 function rate(k:string){let q=(hits.get(k)||[]).filter(t=>Date.now()-t<60000);if(q.length>=30)return false;q.push(Date.now());hits.set(k,q);return true;}
