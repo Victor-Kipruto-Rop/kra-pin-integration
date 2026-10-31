@@ -6,6 +6,7 @@ export const services={
 const servicePaths=JSON.parse(process.env.KRA_SERVICE_PATHS_JSON||'{}'),serviceMethods=JSON.parse(process.env.KRA_SERVICE_METHODS_JSON||'{}');
 const etimsBase=process.env.KRA_ETIMS_BASE_URL||'';
 
+function buildServiceUrl(base,path,payload,method){const u=new URL(base.replace(/\\/+$/,'')+path);if(method==='GET')for(const [key,value] of Object.entries(payload)){if(value!==null&&typeof value==='object')throw Error('GET query parameters must be scalar');if(value!==null)u.searchParams.set(key,String(value));}return u.toString();}
 function stableJson(value){if(Array.isArray(value))return '['+value.map(stableJson).join(',')+']';if(value&&typeof value==='object')return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+stableJson(value[k])).join(',')+'}';return JSON.stringify(value);}
 const send=(r,s,d)=>{r.writeHead(s,{'content-type':'application/json'});r.end(JSON.stringify(d));};
 const auth=k=>!!k&&keys.some(v=>Buffer.byteLength(v)===Buffer.byteLength(k)&&timingSafeEqual(Buffer.from(v),Buffer.from(k)));
@@ -29,10 +30,10 @@ async function invokeService(req,res,id,k){
  const ck=process.env.KRA_PIN_CONSUMER_KEY,cs=process.env.KRA_PIN_CONSUMER_SECRET;
  if(id==='authorization'){try{await token(ck,cs);return send(res,200,{authorized:true,token_type:'Bearer'});}catch{return send(res,502,{error:{code:'authorization_failed',message:'KRA authorization failed'}});}}
  const path=servicePaths[id];if(typeof path!=='string'||!path.startsWith('/')||path.startsWith('//'))return send(res,501,{error:{code:'service_not_configured',message:'No verified KRA endpoint mapping configured for this service'}});
- const method=String(serviceMethods[id]||'POST').toUpperCase();if(method!=='POST')return send(res,501,{detail:'Catalog operations currently require POST; configure the official KRA method before use'});
+ const method=String(serviceMethods[id]||'POST').toUpperCase();if(!['GET','POST'].includes(method)||(method==='GET'&&services[id]))return send(res,501,{detail:'Unsupported or unsafe configured HTTP method'});
  const upstreamBase=id==='etims-oscu-integrator-automated-testing'?etimsBase:base;try{const u=new URL(upstreamBase);if(u.protocol!=='https:'||!u.hostname.endsWith('.kra.go.ke'))throw Error('invalid host');}catch{return send(res,501,{error:{code:'service_base_not_configured',message:'Set a verified HTTPS KRA base URL for this service'}});}
  try{
-  let tok=await token(ck,cs),response=await fetch(upstreamBase+path,{method,headers:{authorization:'Bearer '+tok,'content-type':'application/json'},...(method==='POST'?{body:JSON.stringify(body.payload)}:{}),signal:AbortSignal.timeout(20000)});
+  let tok=await token(ck,cs),response=await fetch(target,{method,headers:{authorization:'Bearer '+tok,'content-type':'application/json'},...(method==='POST'?{body:JSON.stringify(body.payload)}:{}),signal:AbortSignal.timeout(20000)});
   if(response.status===401){cache.delete(ck);tok=await token(ck,cs);response=await fetch(upstreamBase+path,{method,headers:{authorization:'Bearer '+tok,'content-type':'application/json'},...(method==='POST'?{body:JSON.stringify(body.payload)}:{}),signal:AbortSignal.timeout(20000)});}
   const raw=await response.text();let data;try{data=raw?JSON.parse(raw):{};}catch{return send(res,502,{error:{code:'invalid_upstream_response',message:'KRA returned non-JSON content'}});}
   if(!response.ok)return send(res,response.status===429?429:502,{error:{code:'kra_upstream_error',message:'KRA service request failed',upstream_status:response.status}});
