@@ -20,16 +20,16 @@ final class KraService {
   if($payload!==null)$h[]='Content-Type: application/json';
   curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>20,CURLOPT_CONNECTTIMEOUT=>5,CURLOPT_HTTPHEADER=>$h,CURLOPT_CUSTOMREQUEST=>$method,CURLOPT_POSTFIELDS=>$payload===null?null:json_encode($payload,JSON_THROW_ON_ERROR)]);
   $raw=curl_exec($ch);$status=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);
-  if($raw===false){curl_close($ch);throw new \\RuntimeException('Upstream unavailable');}
+  if($raw===false){curl_close($ch);throw new \RuntimeException('Upstream unavailable');}
   curl_close($ch);$data=json_decode($raw,true);
-  if(!is_array($data))throw new \\RuntimeException('Unexpected upstream response');
+  if(!is_array($data))throw new \RuntimeException('Unexpected upstream response');
   return [$status,$data];
  }
  private function token(string $key,string $secret,bool $force=false):string {
   static $cache=[];
   if(!$force&&isset($cache[$key])&&$cache[$key]['expires']>time()+60)return $cache[$key]['value'];
   [$status,$data]=$this->request($this->base.'/v1/token/generate?grant_type=client_credentials',['Authorization'=>'Basic '.base64_encode($key.':'.$secret)]);
-  if($status>=400||empty($data['access_token']))throw new \\RuntimeException('KRA authorization failed');
+  if($status>=400||empty($data['access_token']))throw new \RuntimeException('KRA authorization failed');
   $cache[$key]=['value'=>$data['access_token'],'expires'=>time()+(int)($data['expires_in']??3600)];
   return $cache[$key]['value'];
  }
@@ -58,7 +58,7 @@ final class KraService {
   [$status,$data]=$this->request($this->base.$path,['Authorization: Bearer '.$t],$payload,'POST');
   if($status===404||($status>=400&&(string)($data['errorCode']??'')==='30002'))return ['found'=>false,'pin'=>null,'taxpayer_name'=>null,'environment'=>$this->env,'mock'=>false,'raw'=>null];
   $record=$data['PINDATA']??$data;$pin=$record['KRAPIN']??null;$name=$record['Name']??null;
-  if($status>=400||(!$pin&&!$name))throw new \\RuntimeException('Unexpected KRA response shape');
+  if($status>=400||(!$pin&&!$name))throw new \RuntimeException('Unexpected KRA response shape');
   return ['found'=>true,'pin'=>$pin,'taxpayer_name'=>$name,'environment'=>$this->env,'mock'=>false,'raw'=>null];
  }
 }
