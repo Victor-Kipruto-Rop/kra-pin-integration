@@ -1,0 +1,1 @@
+{"name":"victor-kipruto/kra-pin-integration-php","description":"KRA PIN proxy service","type":"project","require":{"php":">=8.2"},"require-dev":{"phpunit/phpunit":"^11.0"},"autoload":{"psr-4":{"KraPin\\":"src/"}},"scripts":{"test":"phpunit"}}
