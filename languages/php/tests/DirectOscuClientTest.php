@@ -70,7 +70,7 @@ final class DirectOscuClientTest extends TestCase
                     'tin' => 'P1', 'bhfId' => '00', 'cmcKey' => 'ctx',
                 ], true);
                 self::fail('Expected unknown outcome exception');
-            } catch (\\OscuUnknownOutcomeException $error) {
+            } catch (\\KraPin\\OscuUnknownOutcomeException $error) {
                 self::assertStringContainsString('reconcile', $error->getMessage());
             }
         }
