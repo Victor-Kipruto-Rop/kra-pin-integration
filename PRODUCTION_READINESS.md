@@ -2,7 +2,7 @@
 
 > **Current release classification: NOT PRODUCTION READY — validation required.**
 
-This project provides seven independent language templates with a shared dispatcher for all 22 KRA developer-catalog services. It is not a KRA-certified product and this repository does not establish that KRA has approved any specific deployment. It is not a KRA-certified product and this repository does not establish that KRA has approved any specific deployment.
+This project provides seven independent language templates with a shared dispatcher for all 22 KRA developer-catalog services. It is not a KRA-certified product and this repository does not establish that KRA has approved any specific deployment.
 
 ## Release gates
 
@@ -29,13 +29,15 @@ A release may be marked production-ready only when every gate below has recorded
 - The exact upstream path, HTTP method, scope, request fields, response fields, not-found codes and authentication behavior for each of the 22 services must be confirmed against current official KRA specifications and sandbox.
 - In-memory caches and rate limiters do not coordinate across replicas.
 - The PHP CLI Dockerfile uses PHP's built-in development server; production requires PHP-FPM behind a hardened web server or ingress.
-- PHP's local file locks do not coordinate across multiple hosts or containers.\n- Catalog idempotency caches are process-local in most runtimes and are not a durable distributed idempotency store.
+- PHP's local file locks do not coordinate across multiple hosts or containers.
+- Catalog idempotency caches are process-local in most runtimes and are not a durable distributed idempotency store.
 - A PIN lookup result is not identity proof, tax compliance proof or a Tax Compliance Certificate.
 
 ## Required sign-off record
 
 For each release, attach the commit SHA and evidence for:
-1. CI workflow run URLs and all seven runtime test results.\n2. Contract test evidence for all 22 services in all seven runtimes (renumber subsequent items accordingly).
+1. CI workflow run URLs and all seven runtime test results.
+2. Contract test evidence for all 22 services in all seven runtimes (renumber subsequent items accordingly).
 2. OpenAPI contract test report.
 3. KRA sandbox test report with credentials, PINs, taxpayer IDs and personal data redacted.
 4. KRA production approval reference (do not publish confidential approval documents).
