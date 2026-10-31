@@ -8,11 +8,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
+import uuid
 from typing import Any, Protocol
 
 
 class Store(Protocol):
     async def reserve(self, key: str, fingerprint: str) -> tuple[str, dict[str, Any] | None]: ...
+    async def allow_rate_limit(self, identity: str, limit: int, window_seconds: int = 60) -> bool: ...
     async def complete(self, key: str, fingerprint: str, response: dict[str, Any]) -> None: ...
     async def mark_unknown(self, key: str, fingerprint: str) -> None: ...
     async def release(self, key: str, fingerprint: str) -> None: ...
@@ -25,6 +28,7 @@ class MemoryIdempotencyStore:
 
     def __init__(self) -> None:
         self._entries: dict[str, dict[str, Any]] = {}
+        self._hits: dict[str, list[float]] = {}
         self._lock = asyncio.Lock()
 
     async def reserve(self, key: str, fingerprint: str) -> tuple[str, dict[str, Any] | None]:
@@ -44,6 +48,17 @@ class MemoryIdempotencyStore:
         if entry["status"] == "unknown":
             return "unknown", None
         return "pending", None
+
+    async def allow_rate_limit(self, identity: str, limit: int, window_seconds: int = 60) -> bool:
+        now = time.monotonic()
+        async with self._lock:
+            hits = [stamp for stamp in self._hits.get(identity, []) if now - stamp < window_seconds]
+            if len(hits) >= limit:
+                self._hits[identity] = hits
+                return False
+            hits.append(now)
+            self._hits[identity] = hits
+            return True
 
     async def complete(self, key: str, fingerprint: str, response: dict[str, Any]) -> None:
         async with self._lock:
@@ -104,6 +119,23 @@ class RedisIdempotencyStore:
         except Exception:
             # Corrupt or undecryptable state must never permit a duplicate write.
             return "unknown", None
+
+    async def allow_rate_limit(self, identity: str, limit: int, window_seconds: int = 60) -> bool:
+        now_ms = time.time_ns() // 1_000_000
+        window_ms = window_seconds * 1000
+        member = f"{now_ms}:{uuid.uuid4().hex}"
+        script = """
+        redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', ARGV[1] - ARGV[2])
+        local count = redis.call('ZCARD', KEYS[1])
+        if count >= tonumber(ARGV[3]) then return 0 end
+        redis.call('ZADD', KEYS[1], ARGV[1], ARGV[4])
+        redis.call('PEXPIRE', KEYS[1], ARGV[2])
+        return 1
+        """
+        result = await self._redis.eval(
+            script, 1, f"kra:ratelimit:{identity}", now_ms, window_ms, limit, member
+        )
+        return bool(result)
 
     async def complete(self, key: str, fingerprint: str, response: dict[str, Any]) -> None:
         plaintext = json.dumps(response, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
