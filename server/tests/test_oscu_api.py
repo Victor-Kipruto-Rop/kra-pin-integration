@@ -100,3 +100,23 @@ def test_direct_oscu_unknown_outcome_blocks_same_process_replay():
     assert first.status_code == 504
     assert replay.status_code == 409
     assert fake.calls == 1
+
+def test_oscu_idempotency_is_scoped_to_tenant_context():
+    class CountingOscu(FakeOscu):
+        def __init__(self):
+            self.calls = 0
+        async def invoke(self, operation_id, payload, tenant_headers):
+            self.calls += 1
+            return {"operation": operation_id, "tenant": tenant_headers["tin"], "call": self.calls}
+    fake = CountingOscu()
+    app = create_app(Settings(mock=True, proxy_api_keys=("test-key",)), oscu_client=fake)
+    common = {"X-API-Key": "test-key", "X-ETIMS-BHF-ID": "00", "X-ETIMS-CMC-KEY": "ctx", "Idempotency-Key": "tenant-isolation-key-0001"}
+    body = {"consent": True, "payload": {"itemCd": "same"}}
+    with TestClient(app) as client:
+        first = client.post("/v1/etims/oscu/save-item", json=body, headers={**common, "X-ETIMS-TIN": "A111111111A"})
+        replay = client.post("/v1/etims/oscu/save-item", json=body, headers={**common, "X-ETIMS-TIN": "A111111111A"})
+        other_tenant = client.post("/v1/etims/oscu/save-item", json=body, headers={**common, "X-ETIMS-TIN": "A222222222B"})
+    assert first.status_code == replay.status_code == other_tenant.status_code == 200
+    assert first.json()["call"] == replay.json()["call"] == 1
+    assert other_tenant.json()["call"] == 2
+    assert fake.calls == 2
