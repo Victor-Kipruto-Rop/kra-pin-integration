@@ -140,7 +140,7 @@ def main() -> int:
     if not args.execute or not args.confirm_sandbox:
         print("DRY RUN: payload parsed and operation found. No network request was made.")
         print(f"Operation: {args.operation} ({operation['method']} {operation['path']})")
-        print(f"Payload top-level keys: {', '.join(sorted(payload.keys())) or '(none)'}")
+        print(f"Payload field count: {len(payload)}")
         print("To make an approved sandbox call, supply BOTH --execute and --confirm-sandbox.")
         return 0
 
