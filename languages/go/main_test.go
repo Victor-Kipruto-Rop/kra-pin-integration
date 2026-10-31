@@ -52,3 +52,28 @@ func TestGETCatalogPayloadIsEncodedAsQuery(t *testing.T){
  status,_,err:=invoke(c,client,"pin-checker-by-pin",map[string]any{"KRAPIN":"A000000000B"})
  if err!=nil{t.Fatal(err)};if status!=200{t.Fatalf("expected 200, got %d",status)}
 }
+
+func TestCatalogMutationUnknownOutcomeBlocksResubmission(t *testing.T) {
+ tokenCache.Lock(); delete(tokenCache.m,"idem-test-consumer"); tokenCache.Unlock()
+ idemCache.Lock(); idemCache.m=map[string]CachedResponse{}; idemCache.Unlock()
+ operationCalls:=0
+ client:=&http.Client{Transport:roundTripFunc(func(req *http.Request)(*http.Response,error){
+  if strings.Contains(req.URL.Path,"token/generate") {
+   return &http.Response{StatusCode:200,Header:make(http.Header),Body:io.NopCloser(strings.NewReader(`{"access_token":"token","expires_in":3600}`)),Request:req},nil
+  }
+  operationCalls++
+  return &http.Response{StatusCode:503,Header:make(http.Header),Body:io.NopCloser(strings.NewReader(`{"error":"temporary"}`)),Request:req},nil
+ })}
+ c:=Config{Env:"sandbox",Base:"https://sbx.kra.go.ke",Key:"idem-test-consumer",Secret:"secret",Mock:false,APIKeys:[]string{"test-key"},Paths:map[string]string{"nil-return-filing":"/filing"}}
+ limiter:=&Limiter{hits:map[string][]time.Time{}}
+ handler:=serviceHandler(c,client,limiter)
+ request:=func()*httptest.ResponseRecorder{
+  req:=httptest.NewRequest(http.MethodPost,"/v1/kra/nil-return-filing",strings.NewReader(`{"consent":true,"payload":{"period":"2026"}}`))
+  req.Header.Set("X-API-Key","test-key");req.Header.Set("Idempotency-Key","mutation-unknown-test-001")
+  rec:=httptest.NewRecorder();handler(rec,req);return rec
+ }
+ if got:=request().Code;got!=502{t.Fatalf("first status=%d",got)}
+ replay:=request()
+ if replay.Code!=409{t.Fatalf("replay status=%d body=%s",replay.Code,replay.Body.String())}
+ if operationCalls!=1{t.Fatalf("mutation was submitted %d times",operationCalls)}
+}
