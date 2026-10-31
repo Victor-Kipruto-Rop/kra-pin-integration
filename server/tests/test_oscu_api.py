@@ -43,3 +43,60 @@ def test_direct_oscu_write_idempotency_replay_and_conflict():
         conflict = client.post("/v1/etims/oscu/save-item", json={"consent": True, "payload": {"itemCd": "y"}}, headers=headers)
     assert first.status_code == replay.status_code == 200
     assert conflict.status_code == 409
+
+
+def test_direct_oscu_adapter_is_disabled_by_default():
+    settings = Settings(mock=True, proxy_api_keys=("test-key",))
+    app = create_app(settings, oscu_client=None)
+    with TestClient(app) as client:
+        response = client.post(
+            "/v1/etims/oscu/branch-list",
+            json={"consent": True, "payload": {}},
+            headers=KEY,
+        )
+    assert response.status_code == 503
+
+
+def test_direct_oscu_route_requires_api_key():
+    with make_client() as client:
+        response = client.post(
+            "/v1/etims/oscu/branch-list",
+            json={"consent": True, "payload": {}},
+        )
+    assert response.status_code == 401
+
+
+def test_direct_oscu_unknown_outcome_blocks_same_process_replay():
+    from app.kra_client import KraError
+
+    class TimeoutOscu(FakeOscu):
+        def __init__(self):
+            self.calls = 0
+        async def invoke(self, operation_id, payload, tenant_headers):
+            self.calls += 1
+            raise KraError(504, "oscu_outcome_unknown", "simulated timeout")
+
+    fake = TimeoutOscu()
+    settings = Settings(mock=True, proxy_api_keys=("test-key",))
+    app = create_app(settings, oscu_client=fake)
+    headers = {
+        **KEY,
+        "X-ETIMS-TIN": "A123456789Z",
+        "X-ETIMS-BHF-ID": "00",
+        "X-ETIMS-CMC-KEY": "ctx",
+        "Idempotency-Key": "unknown-outcome-key-001",
+    }
+    with TestClient(app) as client:
+        first = client.post(
+            "/v1/etims/oscu/save-item",
+            json={"consent": True, "payload": {"itemCd": "x"}},
+            headers=headers,
+        )
+        replay = client.post(
+            "/v1/etims/oscu/save-item",
+            json={"consent": True, "payload": {"itemCd": "x"}},
+            headers=headers,
+        )
+    assert first.status_code == 504
+    assert replay.status_code == 409
+    assert fake.calls == 1
