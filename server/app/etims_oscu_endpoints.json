@@ -1,0 +1,278 @@
+{
+  "base_url": "https://sbx.kra.go.ke/etims-oscu/api/v1",
+  "operations": [
+    {
+      "id": "branch-insurance-information",
+      "method": "POST",
+      "path": "/branchInsuranceInfo",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "mutates": true
+    },
+    {
+      "id": "branch-user-account",
+      "method": "POST",
+      "path": "/branchUserAccount",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "mutates": true
+    },
+    {
+      "id": "branch-send-customer-information",
+      "method": "POST",
+      "path": "/branchSendCustomerInfo",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "mutates": true
+    },
+    {
+      "id": "branch-list",
+      "method": "POST",
+      "path": "/branchList",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "mutates": false
+    },
+    {
+      "id": "select-code-list",
+      "method": "POST",
+      "path": "/selectCodeList",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "mutates": false
+    },
+    {
+      "id": "customer-pin-info",
+      "method": "POST",
+      "path": "/customerPinInfo",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "mutates": false
+    },
+    {
+      "id": "select-item-classification",
+      "method": "POST",
+      "path": "/selectItemClass",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "mutates": false
+    },
+    {
+      "id": "select-taxpayer-information",
+      "method": "POST",
+      "path": "/selectTaxpayerInfo",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "mutates": false
+    },
+    {
+      "id": "select-notice-list",
+      "method": "POST",
+      "path": "/selectNoticeList",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "mutates": false
+    },
+    {
+      "id": "imported-item-information",
+      "method": "POST",
+      "path": "/importedItemInfo",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "mutates": false
+    },
+    {
+      "id": "imported-item-converted-information",
+      "method": "POST",
+      "path": "/importedItemConvertedInfo",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "mutates": true
+    },
+    {
+      "id": "oscu-initialization",
+      "method": "POST",
+      "path": "/initialize",
+      "headers": [
+        "apigee_app_id"
+      ],
+      "mutates": true
+    },
+    {
+      "id": "item-information",
+      "method": "POST",
+      "path": "/itemInfo",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "mutates": false
+    },
+    {
+      "id": "save-item-composition",
+      "method": "POST",
+      "path": "/saveItemComposition",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "mutates": true
+    },
+    {
+      "id": "save-item",
+      "method": "POST",
+      "path": "/saveItem",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "mutates": true
+    },
+    {
+      "id": "get-purchase-transaction-information",
+      "method": "POST",
+      "path": "/getPurchaseTransactionInfo",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "mutates": false
+    },
+    {
+      "id": "send-purchase-transaction-information",
+      "method": "POST",
+      "path": "/sendPurchaseTransactionInfo",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "mutates": true
+    },
+    {
+      "id": "send-sales-transaction",
+      "method": "POST",
+      "path": "/sendSalesTransaction",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "mutates": true
+    },
+    {
+      "id": "select-invoice-detail",
+      "method": "POST",
+      "path": "/selectInvoiceDetail",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "mutates": false
+    },
+    {
+      "id": "select-sales-transactions",
+      "method": "POST",
+      "path": "/selectSalesTransactions",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "mutates": false
+    },
+    {
+      "id": "insert-stock-io",
+      "method": "POST",
+      "path": "/insert/stockIO",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "mutates": true
+    },
+    {
+      "id": "save-stock-master",
+      "method": "POST",
+      "path": "/save/stockMaster",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "mutates": true
+    },
+    {
+      "id": "select-stock-move-lists",
+      "method": "POST",
+      "path": "/selectStockMoveLists",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "mutates": false
+    }
+  ]
+}
