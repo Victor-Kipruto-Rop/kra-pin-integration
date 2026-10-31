@@ -3,6 +3,7 @@ package main
 import (
  "net/http"
  "net/http/httptest"
+ "io"
  "strings"
  "testing"
 )
@@ -36,4 +37,17 @@ func TestCatalogHandlerRequiresConsentAndIdempotency(t *testing.T) {
  if got:=request("pin-checker-by-pin",`{"consent":false,"payload":{}}`,"").Code;got!=400{t.Fatalf("consent status=%d",got)}
  if got:=request("nil-return-filing",`{"consent":true,"payload":{}}`,"").Code;got!=400{t.Fatalf("idempotency status=%d",got)}
  if got:=request("pin-checker-by-pin",`{"consent":true,"payload":{}}`,"").Code;got!=501{t.Fatalf("mock fail-closed status=%d",got)}
+}
+
+type roundTripFunc func(*http.Request) (*http.Response,error)
+func (fn roundTripFunc) RoundTrip(req *http.Request)(*http.Response,error){return fn(req)}
+func TestGETCatalogPayloadIsEncodedAsQuery(t *testing.T){
+ tokenCache.Lock();delete(tokenCache.m,"test-consumer");tokenCache.Unlock()
+ client:=&http.Client{Transport:roundTripFunc(func(req *http.Request)(*http.Response,error){
+  body:="{}";if strings.Contains(req.URL.Path,"token/generate"){body=`{"access_token":"test-token","expires_in":3600}`}else{if req.Method!="GET"{t.Errorf("expected GET, got %s",req.Method)};if req.URL.Query().Get("KRAPIN")!="A000000000B"{t.Errorf("query payload not forwarded: %s",req.URL.RawQuery)};body=`{"found":true}`}
+  return &http.Response{StatusCode:200,Header:make(http.Header),Body:io.NopCloser(strings.NewReader(body)),Request:req},nil
+ })}
+ c:=Config{Env:"sandbox",Base:"https://sbx.kra.go.ke",Key:"test-consumer",Secret:"test-secret",Paths:map[string]string{"pin-checker-by-pin":"/checker"},Methods:map[string]string{"pin-checker-by-pin":"GET"}}
+ status,_,err:=invoke(c,client,"pin-checker-by-pin",map[string]any{"KRAPIN":"A000000000B"})
+ if err!=nil{t.Fatal(err)};if status!=200{t.Fatalf("expected 200, got %d",status)}
 }
