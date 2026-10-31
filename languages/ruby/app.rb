@@ -70,6 +70,7 @@ class KraPinApp
     if prior
      return reply(409,{error:{code:'idempotency_conflict',message:'Idempotency-Key was already used with a different payload'}}) unless prior[:fingerprint]==fingerprint
      return reply(200,prior[:data]) if prior[:state]=='complete'
+     return reply(409,{error:{code:'idempotency_in_progress',message:'A request with this Idempotency-Key is already in progress'}}) if prior[:state]=='pending'
      return reply(409,{error:{code:'idempotency_outcome_unknown',message:'Previous request outcome is unknown; reconcile with KRA before retrying'}})
     end
    end
