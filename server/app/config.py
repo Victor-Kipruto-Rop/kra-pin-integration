@@ -41,6 +41,10 @@ class Settings:
     proxy_api_keys: tuple[str, ...] = ()
     allow_unauthenticated: bool = False
     cors_origins: tuple[str, ...] = ()
+    etims_oscu_enabled: bool = False
+    etims_oscu_consumer_key: str = ""
+    etims_oscu_consumer_secret: str = ""
+    etims_oscu_app_id: str = ""
 
     @property
     def base_url(self) -> str:
@@ -73,6 +77,10 @@ def load_settings() -> Settings:
         proxy_api_keys=_env_list("PROXY_API_KEYS"),
         allow_unauthenticated=_env_bool("ALLOW_UNAUTHENTICATED", False),
         cors_origins=_env_list("CORS_ORIGINS"),
+        etims_oscu_enabled=_env_bool("ETIMS_OSCU_ENABLED", False),
+        etims_oscu_consumer_key=os.environ.get("ETIMS_OSCU_CONSUMER_KEY", ""),
+        etims_oscu_consumer_secret=os.environ.get("ETIMS_OSCU_CONSUMER_SECRET", ""),
+        etims_oscu_app_id=os.environ.get("ETIMS_OSCU_APP_ID", ""),
     )
 
 
@@ -94,5 +102,10 @@ def validate_settings(s: Settings) -> None:
         )
     if s.allow_unauthenticated and s.environment == "production":
         problems.append("ALLOW_UNAUTHENTICATED cannot be enabled in production")
+    if s.etims_oscu_enabled:
+        if s.environment != "sandbox":
+            problems.append("Direct eTIMS OSCU is sandbox-only until KRA provides production endpoint details and approval")
+        if not (s.etims_oscu_consumer_key and s.etims_oscu_consumer_secret and s.etims_oscu_app_id):
+            problems.append("ETIMS_OSCU_CONSUMER_KEY, ETIMS_OSCU_CONSUMER_SECRET and ETIMS_OSCU_APP_ID are required when ETIMS_OSCU_ENABLED=true")
     if problems:
         raise ConfigError("; ".join(problems))

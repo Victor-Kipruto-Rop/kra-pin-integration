@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "KRA Fetch Taxpayer Obligations request payload",
+  "description": "Payload for POST /dtd/checker/v1/obligation from the supplied sandbox Postman collection.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "taxPayerPin"
+  ],
+  "properties": {
+    "taxPayerPin": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20,
+      "pattern": "^[A-Za-z0-9]+$",
+      "description": "Taxpayer KRA PIN; property casing is taxPayerPin."
+    }
+  }
+}

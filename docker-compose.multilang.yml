@@ -1,0 +1,29 @@
+services:
+  python:
+    build: ./server
+    env_file: .env
+    ports: ["8000:8000"]
+  go:
+    build: ./languages/go
+    env_file: ./languages/go/.env
+    ports: ["8001:8000"]
+  java:
+    build: ./languages/java
+    env_file: ./languages/java/.env
+    ports: ["8002:8000"]
+  javascript:
+    build: ./languages/javascript
+    env_file: ./languages/javascript/.env
+    ports: ["8003:8000"]
+  typescript:
+    build: ./languages/typescript
+    env_file: ./languages/typescript/.env
+    ports: ["8004:8000"]
+  php:
+    build: ./languages/php
+    env_file: ./languages/php/.env
+    ports: ["8005:8000"]
+  ruby:
+    build: ./languages/ruby
+    env_file: ./languages/ruby/.env
+    ports: ["8006:8000"]

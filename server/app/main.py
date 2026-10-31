@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
+import json
 import logging
 from contextlib import asynccontextmanager
 
@@ -11,6 +13,7 @@ from fastapi.responses import JSONResponse
 from . import __version__
 from .config import Settings, load_settings, validate_settings
 from .kra_client import KraClient, KraError, MockKraClient, PinResult
+from .oscu_client import DirectOscuClient
 from .ratelimit import RateLimiter
 from .schemas import PinByIdRequest, PinVerifyRequest, VerifyResponse, normalize_pin
 from .security import api_key_matches, mask_pin
@@ -18,16 +21,22 @@ from .security import api_key_matches, mask_pin
 log = logging.getLogger("kra_pin")
 
 
-def create_app(settings: Settings | None = None, client=None) -> FastAPI:
+def create_app(settings: Settings | None = None, client=None, oscu_client=None) -> FastAPI:
     settings = settings or load_settings()
     validate_settings(settings)
     limiter = RateLimiter(settings.rate_limit_per_minute)
+    idempotency_cache: dict[str, tuple[str, dict | None]] = {}
+    idempotency_lock = asyncio.Lock()
+    service_mutates = {"authorization": False, "pin-checker-by-pin": False, "pin-checker-by-id": False, "fetch-taxpayer-obligations": False, "know-kra-tax-service-office": False, "tax-compliance-certificate-application": True, "tax-compliance-certificate-checker": False, "vat-exemption-checker": False, "it-exemption-checker": False, "nil-return-filing": True, "tot-return-filing": True, "income-tax-withholding-prn-generation": True, "vat-withholding-prn-generation": True, "rental-withholding-prn-generation": True, "excise-license-checker-by-pin": False, "excise-license-checker-by-certificate-number": False, "customs-declaration-status-checker": False, "customs-tax-calculator": False, "import-certificate-checker-by-pin": False, "import-certificate-checker-by-cert-number": False, "invoice-checker": False, "etims-oscu-integrator-automated-testing": True}
     kra = client or (MockKraClient() if settings.mock else KraClient(settings))
+    oscu = oscu_client or (DirectOscuClient(settings) if settings.etims_oscu_enabled else None)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
         yield
         await kra.aclose()
+        if oscu is not None:
+            await oscu.aclose()
 
     app = FastAPI(
         title="KRA PIN Integration Template",
@@ -41,7 +50,7 @@ def create_app(settings: Settings | None = None, client=None) -> FastAPI:
             CORSMiddleware,
             allow_origins=list(settings.cors_origins),
             allow_methods=["GET", "POST"],
-            allow_headers=["X-API-Key", "Content-Type"],
+            allow_headers=["X-API-Key", "Content-Type", "Idempotency-Key", "X-ETIMS-TIN", "X-ETIMS-BHF-ID", "X-ETIMS-CMC-KEY"],
         )
 
     async def guard(request: Request, x_api_key: str | None = Header(default=None)) -> str:
@@ -103,5 +112,96 @@ def create_app(settings: Settings | None = None, client=None) -> FastAPI:
         result = await kra.check_pin_by_id(body.taxpayer_id, body.taxpayer_type.upper())
         log.info("pin_by_id found=%s caller=%s", result.found, identity)  # never log the ID
         return to_response(result)
+
+
+    @app.post("/v1/kra/{service_id}", tags=["kra-services"])
+    async def invoke_kra_service(
+        service_id: str,
+        body: dict,
+        identity: str = Depends(guard),
+        idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    ) -> dict:
+        if service_id not in service_mutates:
+            raise HTTPException(status_code=404, detail="Unknown KRA service")
+        if body.get("consent") is not True:
+            raise HTTPException(status_code=400, detail="consent must be true")
+        payload = body.get("payload")
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=422, detail="payload must be a JSON object")
+        if service_mutates[service_id] and (
+            not idempotency_key or not 16 <= len(idempotency_key) <= 128
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Idempotency-Key (16-128 chars) is required for this operation",
+            )
+        cache_key = hashlib.sha256(
+            f"{identity}:{service_id}:{idempotency_key}".encode()
+        ).hexdigest() if idempotency_key else None
+        fingerprint = hashlib.sha256(
+            json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+        ).hexdigest()
+        if settings.mock:
+            raise HTTPException(
+                status_code=501,
+                detail="No fabricated filing/payment mock exists; configure a verified KRA sandbox mapping",
+            )
+        if cache_key:
+            # Serializes same-process duplicate submissions. Production must use a shared
+            # durable store (Redis/database) to coordinate multiple workers/replicas.
+            async with idempotency_lock:
+                prior = idempotency_cache.get(cache_key)
+                if prior:
+                    if prior[0] != fingerprint:
+                        raise HTTPException(status_code=409, detail="Idempotency-Key was already used with a different payload")
+                    return prior[1]
+                result = await kra.invoke_catalog_service(service_id, payload)
+                idempotency_cache[cache_key] = (fingerprint, result)
+                return result
+        return await kra.invoke_catalog_service(service_id, payload)
+
+    @app.post("/v1/etims/oscu/{operation_id}", tags=["etims-oscu"])
+    async def invoke_direct_oscu(
+        operation_id: str,
+        body: dict,
+        identity: str = Depends(guard),
+        x_etims_tin: str | None = Header(default=None, alias="X-ETIMS-TIN"),
+        x_etims_bhf_id: str | None = Header(default=None, alias="X-ETIMS-BHF-ID"),
+        x_etims_cmc_key: str | None = Header(default=None, alias="X-ETIMS-CMC-KEY"),
+        idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    ) -> dict:
+        if oscu is None:
+            raise HTTPException(status_code=503, detail="Direct eTIMS OSCU adapter is disabled")
+        if body.get("consent") is not True:
+            raise HTTPException(status_code=400, detail="consent must be true")
+        payload = body.get("payload")
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=422, detail="payload must be a JSON object")
+        operation = oscu.operation(operation_id)
+        if operation is None:
+            raise HTTPException(status_code=404, detail="Unknown direct OSCU operation")
+        if operation.get("mutates") and (not idempotency_key or not 16 <= len(idempotency_key) <= 128):
+            raise HTTPException(status_code=400, detail="Idempotency-Key (16-128 chars) is required")
+        cache_key = hashlib.sha256(f"oscu:{identity}:{operation_id}:{idempotency_key}".encode()).hexdigest() if idempotency_key else None
+        fingerprint = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+        tenant_headers = {"tin": x_etims_tin or "", "bhfId": x_etims_bhf_id or "", "cmcKey": x_etims_cmc_key or ""}
+        if cache_key:
+            async with idempotency_lock:
+                prior = idempotency_cache.get(cache_key)
+                if prior:
+                    if prior[0] != fingerprint:
+                        raise HTTPException(status_code=409, detail="Idempotency-Key was reused with a different payload")
+                    if prior[1] is None:
+                        raise HTTPException(status_code=409, detail="Previous OSCU request outcome is unknown; reconcile with KRA before retrying")
+                    return prior[1]
+                try:
+                    result = await oscu.invoke(operation_id, payload, tenant_headers)
+                except KraError as exc:
+                    if exc.code == "oscu_outcome_unknown":
+                        idempotency_cache[cache_key] = (fingerprint, None)
+                    raise
+                idempotency_cache[cache_key] = (fingerprint, result)
+                return result
+        return await oscu.invoke(operation_id, payload, tenant_headers)
 
     return app

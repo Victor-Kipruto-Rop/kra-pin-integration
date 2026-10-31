@@ -103,3 +103,40 @@ def test_unsafe_configuration_refuses_to_start(overrides):
 
 def test_local_dev_can_run_unauthenticated():
     validate_settings(Settings(mock=True, allow_unauthenticated=True))
+
+@pytest.mark.parametrize('service_id', [
+    'authorization','pin-checker-by-pin','pin-checker-by-id','fetch-taxpayer-obligations',
+    'know-kra-tax-service-office','tax-compliance-certificate-application',
+    'tax-compliance-certificate-checker','vat-exemption-checker','it-exemption-checker',
+    'nil-return-filing','tot-return-filing','income-tax-withholding-prn-generation',
+    'vat-withholding-prn-generation','rental-withholding-prn-generation',
+    'excise-license-checker-by-pin','excise-license-checker-by-certificate-number',
+    'customs-declaration-status-checker','customs-tax-calculator','import-certificate-checker-by-pin',
+    'import-certificate-checker-by-cert-number','invoice-checker','etims-oscu-integrator-automated-testing',
+])
+def test_all_catalog_routes_are_registered_in_mock_mode(client, service_id):
+    response = client.post(f'/v1/kra/{service_id}', json={'consent': True, 'payload': {}}, headers={**KEY, 'Idempotency-Key': 'test-idempotency-key-0001'})
+    assert response.status_code == 501
+    assert 'mock' in response.text.lower() or 'mapping' in response.text.lower()
+
+
+def test_catalog_idempotency_replays_same_payload_and_rejects_conflicts():
+    class CatalogClient:
+        def __init__(self):
+            self.calls = 0
+        async def invoke_catalog_service(self, service_id, payload):
+            self.calls += 1
+            return {"service": service_id, "accepted": True}
+        async def aclose(self):
+            return None
+
+    fake = CatalogClient()
+    app = create_app(Settings(mock=False, proxy_api_keys=("test-key",), pin_key="consumer", pin_secret="secret"), client=fake)
+    headers = {**KEY, "Idempotency-Key": "idempotency-test-0001"}
+    with TestClient(app) as c:
+        first = c.post("/v1/kra/nil-return-filing", json={"consent": True, "payload": {"period": "2026"}}, headers=headers)
+        replay = c.post("/v1/kra/nil-return-filing", json={"consent": True, "payload": {"period": "2026"}}, headers=headers)
+        conflict = c.post("/v1/kra/nil-return-filing", json={"consent": True, "payload": {"period": "2025"}}, headers=headers)
+    assert first.status_code == replay.status_code == 200
+    assert conflict.status_code == 409
+    assert fake.calls == 1

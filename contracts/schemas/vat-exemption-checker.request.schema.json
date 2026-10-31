@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "KRA VAT Exemption Checker request payload",
+  "description": "Payload for POST /dtd/checker/v1/vatexemption as documented in the supplied KRA sandbox Postman collection.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "VatExemptionCertificateNo"
+  ],
+  "properties": {
+    "VatExemptionCertificateNo": {
+      "type": "string",
+      "minLength": 1,
+      "description": "VAT exemption certificate number. Property name and casing are exactly VatExemptionCertificateNo."
+    }
+  }
+}

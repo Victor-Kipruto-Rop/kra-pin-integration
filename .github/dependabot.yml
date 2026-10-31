@@ -2,9 +2,25 @@ version: 2
 updates:
   - package-ecosystem: pip
     directory: /server
-    schedule:
-      interval: weekly
+    schedule: {interval: weekly}
   - package-ecosystem: github-actions
     directory: /
-    schedule:
-      interval: weekly
+    schedule: {interval: weekly}
+  - package-ecosystem: gomod
+    directory: /languages/go
+    schedule: {interval: weekly}
+  - package-ecosystem: maven
+    directory: /languages/java
+    schedule: {interval: weekly}
+  - package-ecosystem: npm
+    directory: /languages/javascript
+    schedule: {interval: weekly}
+  - package-ecosystem: npm
+    directory: /languages/typescript
+    schedule: {interval: weekly}
+  - package-ecosystem: composer
+    directory: /languages/php
+    schedule: {interval: weekly}
+  - package-ecosystem: bundler
+    directory: /languages/ruby
+    schedule: {interval: weekly}
