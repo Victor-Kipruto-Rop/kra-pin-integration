@@ -57,7 +57,7 @@ class DirectOscuClient:
                 raise ValueError("missing token")
             self._token = token
             return token
-        except (httpx.HTTPError, ValueError, TypeError) as exc:
+        except (httpx.HTTPError, ValueError, TypeError, AttributeError) as exc:
             raise OscuError("oscu_auth_failed", "Could not obtain a valid KRA OSCU access token") from exc
 
     def invoke(
