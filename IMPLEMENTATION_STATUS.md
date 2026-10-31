@@ -55,3 +55,11 @@ Do not merge as production-ready or deploy real taxpayer data until all release 
 - GitHub Actions runs still fail before any job steps execute (empty step lists); billing/runner provisioning must be resolved or the GitLab pipeline must be run after importing/mirroring the repository.
 - Official KRA documentation distinguishes the eTIMS OSCU/VSCU system-to-system integration and certification process from the separate GavaConnect API catalog. The 23-operation sandbox collection in this repository must be checked with KRA to confirm that its host, token route and endpoint inventory are the intended product-specific automated-testing API; it must not be presented as the standard OSCU device API without that confirmation.
 - KRA-issued credentials, approved taxpayer test data, complete official per-service contracts, live sandbox evidence, certification, privacy/legal review and independent security review remain external requirements.
+
+## Idempotency transition hardening
+
+- Completion and unknown-outcome transitions now require an existing pending reservation with the exact matching payload fingerprint.
+- The in-memory store enforces the same ownership rule as Redis.
+- Redis transitions use atomic Lua compare-and-set operations, preventing a stale worker or mismatched request from overwriting a completed, unknown, or differently-owned record.
+- Regression tests cover attempted overwrites after completion for both storage implementations.
+- These changes are committed but have not yet been executed in a functioning test runner; do not treat the regression tests as passing until CI or the local matrix runs.
