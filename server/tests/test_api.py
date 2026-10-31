@@ -1,0 +1,105 @@
+import pytest
+from fastapi.testclient import TestClient
+
+from app.config import ConfigError, Settings, validate_settings
+from app.kra_client import KraError, MockKraClient
+from app.main import create_app
+
+KEY = {"X-API-Key": "test-key"}
+
+
+def make_app(**overrides):
+    base = dict(mock=True, proxy_api_keys=("test-key",))
+    base.update(overrides)
+    return create_app(Settings(**base))
+
+
+@pytest.fixture
+def client():
+    with TestClient(make_app()) as c:
+        yield c
+
+
+def test_health_needs_no_key(client):
+    body = client.get("/health").json()
+    assert body == {"status": "ok", "environment": "sandbox", "mock": True}
+
+
+def test_requires_api_key(client):
+    payload = {"pin": "A000000000B", "consent": True}
+    assert client.post("/v1/pin/verify", json=payload).status_code == 401
+    assert client.post("/v1/pin/verify", json=payload, headers={"X-API-Key": "nope"}).status_code == 401
+
+
+def test_verify_demo_pin_and_lowercase_input(client):
+    r = client.post("/v1/pin/verify", json={"pin": " a000000000b ", "consent": True}, headers=KEY)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["found"] is True and body["pin"] == "A000000000B" and body["raw"] is None
+
+
+def test_unknown_pin_is_not_found(client):
+    r = client.post("/v1/pin/verify", json={"pin": "A999999999Z", "consent": True}, headers=KEY)
+    assert r.status_code == 200 and r.json()["found"] is False
+
+
+def test_consent_is_required(client):
+    r = client.post("/v1/pin/verify", json={"pin": "A000000000B"}, headers=KEY)
+    assert r.status_code == 400
+
+
+def test_consent_can_be_disabled():
+    with TestClient(make_app(require_consent=False)) as c:
+        r = c.post("/v1/pin/verify", json={"pin": "A000000000B"}, headers=KEY)
+        assert r.status_code == 200
+
+
+def test_strict_format_rejects_bad_pin():
+    with TestClient(make_app(strict_pin_format=True)) as c:
+        r = c.post("/v1/pin/verify", json={"pin": "123", "consent": True}, headers=KEY)
+        assert r.status_code == 422
+
+
+def test_verify_by_id(client):
+    r = client.post(
+        "/v1/pin/verify-by-id", json={"taxpayer_id": "00000000", "consent": True}, headers=KEY
+    )
+    assert r.status_code == 200 and r.json()["found"] is True
+
+
+def test_rate_limit():
+    with TestClient(make_app(rate_limit_per_minute=2)) as c:
+        payload = {"pin": "A000000000B", "consent": True}
+        codes = [c.post("/v1/pin/verify", json=payload, headers=KEY).status_code for _ in range(3)]
+        assert codes == [200, 200, 429]
+
+
+def test_upstream_errors_are_mapped_without_leaking_details():
+    class Failing(MockKraClient):
+        async def check_pin(self, pin):
+            raise KraError(504, "upstream_timeout", "KRA timed out")
+
+    app = create_app(Settings(mock=True, proxy_api_keys=("test-key",)), client=Failing())
+    with TestClient(app) as c:
+        r = c.post("/v1/pin/verify", json={"pin": "A000000000B", "consent": True}, headers=KEY)
+        assert r.status_code == 504
+        assert r.json() == {"error": {"code": "upstream_timeout", "message": "KRA timed out"}}
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        dict(environment="production", mock=True, proxy_api_keys=("k",)),
+        dict(mock=False, proxy_api_keys=("k",)),  # missing KRA credentials
+        dict(mock=True),  # no proxy keys and not explicitly unauthenticated
+        dict(environment="production", pin_key="a", pin_secret="b", allow_unauthenticated=True),
+        dict(environment="staging", mock=True, proxy_api_keys=("k",)),
+    ],
+)
+def test_unsafe_configuration_refuses_to_start(overrides):
+    with pytest.raises(ConfigError):
+        validate_settings(Settings(**overrides))
+
+
+def test_local_dev_can_run_unauthenticated():
+    validate_settings(Settings(mock=True, allow_unauthenticated=True))

@@ -1,0 +1,8 @@
+services:
+  kra-pin-proxy:
+    build: ./server
+    env_file: .env
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    read_only: true
