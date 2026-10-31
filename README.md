@@ -115,7 +115,7 @@ Example structure only — these are placeholders, not real KRA paths:
 
 The supplied Postman collection also documents **23 direct OSCU sandbox POST operations** at `https://sbx.kra.go.ke/etims-oscu/api/v1`. This is not the GavaConnect catalog endpoint above and is not wired into the seven-language dispatcher. See [direct OSCU integration notes](docs/etims-oscu-direct-integration.md) and the [machine-readable endpoint inventory](contracts/etims-oscu-direct.endpoints.json).
 
-The inventory captures the token endpoint, methods, paths and header context. A separate direct-OSCU runtime adapter, formal request/response schemas, approved sandbox tests and applicable certification are still required. The supplied collection contains malformed sample JSON and one malformed sales property; see the integration notes. Never reuse GavaConnect bearer tokens or proxy API keys for the direct OSCU host.
+The inventory captures the token endpoint, methods, paths and header context. A separate Python direct-OSCU sandbox adapter is now implemented; formal request/response schemas, live sandbox tests and applicable certification are still outstanding. The supplied collection contains malformed sample JSON and one malformed sales property; see the integration notes. Never reuse GavaConnect bearer tokens or proxy API keys for the direct OSCU host.
 
 
 ### Direct OSCU adapter (Python reference)
