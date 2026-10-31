@@ -62,7 +62,7 @@ class KraPinApp
   ck=ENV.fetch('KRA_PIN_CONSUMER_KEY','');cs=ENV.fetch('KRA_PIN_CONSUMER_SECRET','')
   if id=='authorization';token(ck,cs);return reply(200,{authorized:true,token_type:'Bearer'});end
   upstream_path=@service_paths[id];return reply(501,{error:{code:'service_not_configured',message:'No verified KRA endpoint mapping configured'}}) unless upstream_path.is_a?(String)&&upstream_path.start_with?('/')&&!upstream_path.start_with?('//')
-  method=(@service_methods[id]||'POST').upcase;return reply(501,{detail:'Catalog operations currently require POST; configure the official KRA method before use'}) unless method=='POST'
+  method=(@service_methods[id]||'POST').upcase;return reply(501,{detail:'Unsupported or unsafe configured HTTP method'}) unless ['GET','POST'].include?(method)&&!(method=='GET'&&mutates)
   upstream_base=id=='etims-oscu-integrator-automated-testing' ? ENV.fetch('KRA_ETIMS_BASE_URL','') : @base
   begin
    parsed_base=URI(upstream_base);return reply(501,{error:{code:'service_base_not_configured',message:'Set a verified HTTPS KRA base URL for this service'}}) unless parsed_base.scheme=='https'&&parsed_base.host&.end_with?('.kra.go.ke')
@@ -77,7 +77,13 @@ class KraPinApp
   end
  end
  def upstream_request(method,base_url,path,payload,access)
-  uri=URI("#{base_url}#{path}");request=method=='GET' ? Net::HTTP::Get.new(uri) : Net::HTTP::Post.new(uri)
+  normalized_base=base_url.sub(%r{/+\z},'')
+  uri=URI("#{normalized_base}#{path}")
+  if method=='GET'
+   query=URI.encode_www_form(payload)
+   uri.query=[uri.query,query].compact.reject(&:empty?).join('&')
+  end
+  request=method=='GET' ? Net::HTTP::Get.new(uri) : Net::HTTP::Post.new(uri)
   request['Authorization']="Bearer #{access}";request['Content-Type']='application/json';request.body=JSON.generate(payload) if method=='POST'
   Net::HTTP.start(uri.hostname,uri.port,use_ssl:true,open_timeout:5,read_timeout:20){|http|http.request(request)}
  end
