@@ -14,6 +14,16 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "contracts" / "etims-oscu-direct.endpoints.json"
 BUNDLED = ROOT / "server" / "app" / "etims_oscu_endpoints.json"
 GUIDE = ROOT / "docs" / "etims-oscu-direct-integration.md"
+OPENAPI = ROOT / "contracts" / "etims-oscu-openapi.yaml"
+SDK_MANIFESTS = [
+    ROOT / "languages/python/etims_oscu_endpoints.json",
+    ROOT / "languages/go/oscu/etims_oscu_endpoints.json",
+    ROOT / "languages/java/src/main/resources/etims_oscu_endpoints.json",
+    ROOT / "languages/javascript/src/etims_oscu_endpoints.json",
+    ROOT / "languages/typescript/src/etims_oscu_endpoints.json",
+    ROOT / "languages/php/src/etims_oscu_endpoints.json",
+    ROOT / "languages/ruby/etims_oscu_endpoints.json",
+]
 
 
 def fail(message: str) -> None:
@@ -76,13 +86,24 @@ def main() -> None:
     if project(operations) != project(bundled_operations):
         fail("bundled runtime manifest differs from the canonical contract manifest")
 
+    for sdk_manifest in SDK_MANIFESTS:
+        sdk = load(sdk_manifest)
+        if project(operations) != project(sdk.get("operations", [])):
+            fail(f"SDK manifest differs from canonical contract: {sdk_manifest.relative_to(ROOT)}")
+
+    openapi = OPENAPI.read_text(encoding="utf-8")
+    for operation in operations:
+        if f"  {operation['path']}:\\n" not in openapi or f"      operationId: {operation['id']}\\n" not in openapi:
+            fail(f"OpenAPI contract is missing {operation['id']} ({operation['path']})")
+
     guide = GUIDE.read_text(encoding="utf-8")
     if "isr ccCd" not in guide or "Confirm that field with KRA" not in guide:
         fail("known malformed sales sample field must remain explicitly documented as unresolved")
 
     print(
         f"Validated {len(ids)} unique direct OSCU operations, {len(paths)} paths, "
-        f"{mutating} currently classified writes, and canonical/runtime manifest parity."
+        f"{mutating} currently classified writes, canonical/runtime/7-SDK manifest parity, "
+        "and OpenAPI operation parity."
     )
     print("This is static contract-inventory validation, not live KRA certification.")
 
