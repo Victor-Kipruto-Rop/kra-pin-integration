@@ -1,6 +1,6 @@
 # Direct eTIMS OSCU integration
 
-This is the direct KRA eTIMS OSCU API, separate from GavaConnect. The supplied collection documents sandbox base URL `https://sbx.kra.go.ke/etims-oscu/api/v1`, a shared OAuth client-credentials token endpoint, and 23 POST operations. This file records the integration boundary; it does not claim a runtime adapter or sandbox verification.
+This is the direct KRA eTIMS OSCU API, separate from GavaConnect. The supplied collection documents sandbox base URL `https://sbx.kra.go.ke/etims-oscu/api/v1`, a shared OAuth client-credentials token endpoint, and 23 POST operations. A separate Python reference adapter is implemented behind a disabled-by-default feature flag; live sandbox verification and certification remain pending.
 
 Use HTTP Basic credentials only server-side to obtain a bearer token from `GET https://sbx.kra.go.ke/v1/token/generate?grant_type=client_credentials`. Operations use bearer authentication. Most operations include `tin`, `bhfId`, `cmcKey`, and `apigee_app_id` headers; `initialize` documents only `apigee_app_id`.
 
