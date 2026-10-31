@@ -50,3 +50,28 @@ final class DirectOscuClientTest extends TestCase
         self::assertSame('Bearer token', $calls[1]['headers']['Authorization']);
     }
 }
+
+
+    public function testMutatingServerAndMalformedResponsesAreUnknownOutcomes(): void
+    {
+        foreach ([
+            ['status' => 503, 'body' => '{"error":"temporary"}'],
+            ['status' => 200, 'body' => 'not-json'],
+        ] as $operationResponse) {
+            $transport = function ($url, $headers, $body, $timeout) use ($operationResponse) {
+                if (str_contains($url, '/v1/token/generate')) {
+                    return ['status' => 200, 'body' => '{"access_token":"token","expires_in":3600}'];
+                }
+                return $operationResponse;
+            };
+            $client = new DirectOscuClient('key', 'secret', 'app', 20, $transport);
+            try {
+                $client->invoke('save-item', ['itemCd' => 'item-1'], [
+                    'tin' => 'P1', 'bhfId' => '00', 'cmcKey' => 'ctx',
+                ], true);
+                self::fail('Expected unknown outcome exception');
+            } catch (\\KraPin\\OscuUnknownOutcomeException $error) {
+                self::assertStringContainsString('reconcile', $error->getMessage());
+            }
+        }
+    }
