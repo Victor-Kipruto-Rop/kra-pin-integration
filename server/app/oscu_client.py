@@ -52,7 +52,7 @@ class DirectOscuClient:
             except httpx.TimeoutException as exc:
                 raise KraError(504, "oscu_token_timeout", "KRA OSCU token endpoint timed out") from exc
             except httpx.HTTPError as exc:
-                raise KraError(502, "oscu_upstream_unreachable", "Could not reach KRA OSCU token endpoint") from exc
+                raise KraError(502, "oscu_token_unreachable", "Could not reach KRA OSCU token endpoint") from exc
             if response.status_code in (400, 401, 403):
                 raise KraError(502, "oscu_auth_failed", "KRA rejected the configured OSCU credentials")
             if response.status_code >= 400:
@@ -64,7 +64,7 @@ class DirectOscuClient:
                 if not isinstance(token, str) or not token or ttl <= 0:
                     raise ValueError("invalid token response")
             except (ValueError, KeyError, TypeError) as exc:
-                raise KraError(502, "oscu_unexpected_response", "Malformed KRA OSCU token response") from exc
+                raise KraError(502, "oscu_token_unexpected_response", "Malformed KRA OSCU token response") from exc
             self._tokens = (token, time.monotonic() + ttl)
             return token
 
