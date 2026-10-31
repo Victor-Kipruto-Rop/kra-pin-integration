@@ -31,3 +31,50 @@ def test_unknown_outcome_is_fail_closed_and_release_only_removes_pending():
         await store.aclose()
 
     asyncio.run(scenario())
+
+def test_redis_store_encrypts_cached_response_and_replays_safely():
+    import json
+    from cryptography.fernet import Fernet
+    from app.idempotency import RedisIdempotencyStore
+
+    class FakeRedis:
+        def __init__(self):
+            self.values = {}
+        async def set(self, key, value, ex=None, nx=False):
+            if nx and key in self.values:
+                return False
+            self.values[key] = value
+            return True
+        async def get(self, key):
+            return self.values.get(key)
+        async def eval(self, script, count, key, fingerprint):
+            raw = self.values.get(key)
+            if raw is None:
+                return 0
+            record = json.loads(raw)
+            if record.get("fingerprint") == fingerprint and record.get("status") == "pending":
+                del self.values[key]
+                return 1
+            return 0
+        async def ping(self):
+            return True
+        async def aclose(self):
+            return None
+
+    async def scenario():
+        key = Fernet.generate_key().decode("ascii")
+        store = RedisIdempotencyStore.__new__(RedisIdempotencyStore)
+        store._redis = FakeRedis()
+        store._ttl = 3600
+        store._fernet = Fernet(key.encode("ascii"))
+        assert await store.reserve("redis-key", "fp") == ("new", None)
+        response = {"taxpayer": {"pin": "A123456789Z"}, "name": "Private Name"}
+        await store.complete("redis-key", "fp", response)
+        raw = store._redis.values["kra:idempotency:redis-key"]
+        assert "Private Name" not in raw
+        assert "A123456789Z" not in raw
+        assert await store.reserve("redis-key", "fp") == ("complete", response)
+        assert await store.reserve("redis-key", "other") == ("conflict", None)
+        await store.aclose()
+
+    asyncio.run(scenario())
