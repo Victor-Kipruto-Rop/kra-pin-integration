@@ -36,3 +36,20 @@ test('read-only call uses fixed sandbox host and expected headers', async () => 
   assert.equal(calls[1].options.headers.Authorization, 'Bearer sandbox-token');
   assert.equal(calls[1].options.headers.apigee_app_id, 'app');
 });
+
+
+test('mutating 5xx and malformed responses are marked as unknown outcomes', async () => {
+  for (const operationResponse of [
+    { ok: false, status: 503, text: async () => '{"error":"temporary"}' },
+    { ok: true, status: 200, text: async () => 'not-json' },
+  ]) {
+    const fetchImpl = async (url) => url.includes('/v1/token/generate')
+      ? { ok: true, json: async () => ({ access_token: 'token', expires_in: 3600 }) }
+      : operationResponse;
+    const client = new DirectOscuClient({ consumerKey: 'key', consumerSecret: 'secret', appId: 'app', fetchImpl });
+    await assert.rejects(
+      client.invoke('save-item', { itemCd: 'item-1' }, { tin: 'P1', bhfId: '00', cmcKey: 'ctx' }, { confirmMutation: true }),
+      error => error.code === 'oscu_outcome_unknown' && error.outcomeUnknown === true,
+    );
+  }
+});
