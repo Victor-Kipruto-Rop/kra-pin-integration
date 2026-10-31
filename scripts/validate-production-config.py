@@ -42,7 +42,7 @@ def validate(env: dict[str, str]) -> list[str]:
         errors.append("IDEMPOTENCY_ENCRYPTION_KEY must be configured")
     else:
         try:
-            if len(base64.urlsafe_b64decode(encryption_key.encode("ascii"))) != 32:
+            if len(base64.b64decode(encryption_key.encode("ascii"), altchars=b"-_", validate=True)) != 32:
                 errors.append("IDEMPOTENCY_ENCRYPTION_KEY must decode to 32 bytes")
         except (ValueError, UnicodeEncodeError, binascii.Error):
             errors.append("IDEMPOTENCY_ENCRYPTION_KEY must be a valid URL-safe base64 Fernet key")
