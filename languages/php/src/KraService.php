@@ -16,7 +16,8 @@ final class KraService {
   $this->serviceMethods=json_decode(getenv('KRA_SERVICE_METHODS_JSON')?:'{}',true,512,JSON_THROW_ON_ERROR);
  }
  private function request(string $url,array $headers=[],?array $payload=null,string $method='GET'):array {
-  if($method==='GET'&&$payload!==null)$url.=(str_contains($url,'?')?'&':'?').http_build_query($payload);\n  $ch=curl_init($url);$h=$headers;
+  if($method==='GET'&&$payload!==null)$url.=(str_contains($url,'?')?'&':'?').http_build_query($payload);
+  $ch=curl_init($url);$h=$headers;
   if($method==='POST')$h[]='Content-Type: application/json';
   curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>20,CURLOPT_CONNECTTIMEOUT=>5,CURLOPT_HTTPHEADER=>$h,CURLOPT_CUSTOMREQUEST=>$method,CURLOPT_POSTFIELDS=>$method==='POST'&&$payload!==null?json_encode($payload,JSON_THROW_ON_ERROR):null]);
   $raw=curl_exec($ch);$status=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);
