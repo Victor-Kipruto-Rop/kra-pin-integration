@@ -353,3 +353,48 @@ def test_mutating_direct_oscu_operation_does_not_replay_after_401():
         )
     assert response.status_code == 200
     assert fake.retry_auth is False
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        KraError(504, "oscu_outcome_unknown", "OSCU timed out"),
+        KraError(502, "oscu_upstream_unreachable", "OSCU connection failed"),
+        KraError(502, "oscu_upstream_error", "OSCU upstream error"),
+        KraError(502, "oscu_unexpected_response", "OSCU response malformed"),
+    ],
+)
+def test_ambiguous_oscu_mutation_outcome_is_never_resubmitted(error):
+    class FailingOscuClient:
+        def __init__(self):
+            self.calls = 0
+
+        def operation(self, operation_id):
+            return {"id": operation_id, "mutates": True}
+
+        async def invoke(self, operation_id, payload, tenant_headers, retry_auth=True):
+            self.calls += 1
+            raise error
+
+        async def aclose(self):
+            return None
+
+    fake = FailingOscuClient()
+    app = create_app(
+        Settings(mock=False, proxy_api_keys=("test-key",), pin_key="consumer", pin_secret="secret"),
+        oscu_client=fake,
+    )
+    headers = {
+        **KEY,
+        "Idempotency-Key": "oscu-ambiguous-mutation-0001",
+        "X-ETIMS-TIN": "TEST-TIN",
+        "X-ETIMS-BHF-ID": "00",
+    }
+    payload = {"consent": True, "payload": {"invoice": "test"}}
+    with TestClient(app) as c:
+        first = c.post("/v1/etims/oscu/mutating-operation", json=payload, headers=headers)
+        replay = c.post("/v1/etims/oscu/mutating-operation", json=payload, headers=headers)
+    assert first.status_code in (502, 504)
+    assert replay.status_code == 409
+    assert "outcome is unknown" in replay.json()["detail"]
+    assert fake.calls == 1
