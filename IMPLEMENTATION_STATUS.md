@@ -63,3 +63,13 @@ Do not merge as production-ready or deploy real taxpayer data until all release 
 - Redis transitions use atomic Lua compare-and-set operations, preventing a stale worker or mismatched request from overwriting a completed, unknown, or differently-owned record.
 - Regression tests cover attempted overwrites after completion for both storage implementations.
 - These changes are committed but have not yet been executed in a functioning test runner; do not treat the regression tests as passing until CI or the local matrix runs.
+
+
+## Mutation retry and ambiguous-outcome safeguards
+
+- Catalog and direct OSCU mutation routes disable automatic request replay after HTTP 401; read-only operations retain the configurable token-refresh retry behavior.
+- Mutating catalog operations mark timeout, transport failure, upstream 5xx, malformed responses and unexpected exceptions as unknown outcomes. The idempotency key remains blocked until reconciliation.
+- Direct OSCU mutations apply the same fail-closed policy for timeout, transport failure, upstream 5xx and malformed responses.
+- Added API regression coverage for ambiguous catalog and OSCU mutation outcomes, unexpected exceptions, definitive rejection handling, and disabled mutation auth replay.
+- These tests are committed but have **not** been executed in a functioning test runner. Do not interpret committed tests as passing evidence.
+- KRA's exact semantics for 401, 429, 5xx and operation-level rejection still require written confirmation. The adapter intentionally avoids automatic mutation replay where that guarantee is absent.
