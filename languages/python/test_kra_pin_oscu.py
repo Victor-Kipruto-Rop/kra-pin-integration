@@ -33,12 +33,11 @@ def test_mutating_operation_requires_explicit_confirmation():
         instance.close()
 
 
-def test_initialization_only_requires_app_id_and_confirmation():
+def test_initialization_manifest_requires_only_app_id_header():
     instance = client()
     try:
-        with pytest.raises(ValueError, match="mutate"):
-            instance.invoke("oscu-initialization", {}, {})
-        with pytest.raises(Exception):
-            instance.invoke("oscu-initialization", {}, {}, confirm_mutation=True)
+        operation = instance._operations["oscu-initialization"]
+        assert operation["headers"] == ["apigee_app_id"]
+        assert operation["mutates"] is True
     finally:
         instance.close()
