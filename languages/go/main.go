@@ -19,7 +19,7 @@ import (
 
 type Config struct {
  Env, Base, Key, Secret string
- Mock, Consent bool
+ Mock bool
  APIKeys []string
  Paths, Methods map[string]string
 }
@@ -44,7 +44,7 @@ func loadConfig() Config {
  e:=env("KRA_ENVIRONMENT","sandbox")
  if e!="sandbox"&&e!="production" { log.Fatal("KRA_ENVIRONMENT must be sandbox or production") }
  base:="https://sbx.kra.go.ke"; if e=="production" { base="https://api.kra.go.ke" }
- c:=Config{Env:e,Base:base,Key:os.Getenv("KRA_PIN_CONSUMER_KEY"),Secret:os.Getenv("KRA_PIN_CONSUMER_SECRET"),Mock:env("KRA_MOCK","true")=="true",Consent:env("REQUIRE_CONSENT","true")!="false",APIKeys:strings.Split(os.Getenv("PROXY_API_KEYS"),",")}
+ c:=Config{Env:e,Base:base,Key:os.Getenv("KRA_PIN_CONSUMER_KEY"),Secret:os.Getenv("KRA_PIN_CONSUMER_SECRET"),Mock:env("KRA_MOCK","true")=="true",APIKeys:strings.Split(os.Getenv("PROXY_API_KEYS"),",")}
  if c.Mock&&e=="production" { log.Fatal("mock mode forbidden in production") }
  if !c.Mock&&(c.Key==""||c.Secret=="") { log.Fatal("KRA credentials required when mock mode is disabled") }
  valid:=false;for _,k:=range c.APIKeys { if strings.TrimSpace(k)!="" { valid=true } };if !valid { log.Fatal("PROXY_API_KEYS required") }
@@ -85,7 +85,7 @@ func serviceHandler(c Config,client *http.Client,limiter *Limiter) http.HandlerF
   service:=strings.TrimPrefix(r.URL.Path,"/v1/kra/");mutates,ok:=serviceMutates[service];if !ok{write(w,404,map[string]string{"detail":"Unknown KRA service"});return}
   bodyBytes,err:=io.ReadAll(http.MaxBytesReader(w,r.Body,65536));if err!=nil{write(w,413,map[string]string{"detail":"Request too large"});return}
   var body struct{Consent bool `json:"consent"`;Payload map[string]any `json:"payload"`};if json.Unmarshal(bodyBytes,&body)!=nil{write(w,422,map[string]string{"detail":"Invalid JSON"});return}
-  if c.Consent&&!body.Consent{write(w,400,map[string]string{"detail":"consent must be true"});return};if body.Payload==nil{write(w,422,map[string]string{"detail":"payload must be a JSON object"});return}
+  if !body.Consent{write(w,400,map[string]string{"detail":"consent must be true"});return};if body.Payload==nil{write(w,422,map[string]string{"detail":"payload must be a JSON object"});return}
   idem:=r.Header.Get("Idempotency-Key");if mutates&&(len(idem)<16||len(idem)>128){write(w,400,map[string]string{"detail":"Idempotency-Key (16-128 chars) is required"});return}
   idemKey:="";fingerprintBytes,_:=json.Marshal(body.Payload);fingerprintSum:=sha256.Sum256(fingerprintBytes);fingerprint:=hex.EncodeToString(fingerprintSum[:]);if idem!=""{sum:=sha256.Sum256([]byte(key+":"+service+":"+idem));idemKey=hex.EncodeToString(sum[:]);idemCache.Lock();cached,exists:=idemCache.m[idemKey];idemCache.Unlock();if exists{if cached.Fingerprint!=fingerprint{write(w,409,map[string]string{"code":"idempotency_conflict","message":"Idempotency-Key was already used with a different payload"});return};write(w,cached.Status,cached.Body);return}}
   if c.Mock{write(w,501,map[string]string{"code":"mock_service_not_implemented","message":"No fabricated mock response; configure verified KRA sandbox mapping"});return}
