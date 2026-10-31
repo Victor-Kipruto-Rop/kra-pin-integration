@@ -1,0 +1,56 @@
+openapi: 3.1.0
+info:
+  title: KRA PIN Integration Proxy
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000
+paths:
+  /health:
+    get:
+      security: []
+      responses:
+        '200': {description: Service health}
+  /v1/pin/verify:
+    post:
+      security: [{ApiKey: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pin, consent]
+              properties:
+                pin: {type: string, maxLength: 20}
+                consent: {type: boolean, const: true}
+      responses:
+        '200': {description: PIN lookup result}
+        '400': {description: Consent missing}
+        '401': {description: Invalid API key}
+        '422': {description: Invalid input}
+        '429': {description: Rate limit}
+        '502': {description: Upstream error}
+  /v1/pin/verify-by-id:
+    post:
+      security: [{ApiKey: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [taxpayer_id, consent]
+              properties:
+                taxpayer_id: {type: string, minLength: 5, maxLength: 20}
+                taxpayer_type: {type: string, default: KE}
+                consent: {type: boolean, const: true}
+      responses:
+        '200': {description: PIN lookup result}
+        '400': {description: Consent missing}
+        '401': {description: Invalid API key}
+        '422': {description: Invalid input}
+        '429': {description: Rate limit}
+        '502': {description: Upstream error}
+components:
+  securitySchemes:
+    ApiKey: {type: apiKey, in: header, name: X-API-Key}
