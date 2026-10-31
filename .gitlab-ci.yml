@@ -1,0 +1,80 @@
+stages:
+  - validate
+  - test
+
+workflow:
+  auto_cancel:
+    on_new_commit: interruptible
+
+default:
+  interruptible: true
+  retry: 1
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  npm_config_cache: "$CI_PROJECT_DIR/.npm"
+
+catalog-contract:
+  stage: validate
+  image: python:3.12-slim
+  script:
+    - python scripts/validate-catalog.py
+    - python -m py_compile scripts/validate-production-config.py
+
+python-tests:
+  stage: test
+  image: python:3.12-slim
+  cache:
+    key: python-dependencies
+    paths: [.cache/pip]
+  script:
+    - pip install -r server/requirements-dev.txt
+    - cd server && PYTHONPATH=. pytest -q
+
+go-tests:
+  stage: test
+  image: golang:1.22
+  script:
+    - cd languages/go
+    - go test ./...
+
+java-tests:
+  stage: test
+  image: maven:3.9-eclipse-temurin-21
+  script:
+    - cd languages/java
+    - mvn -B test
+
+javascript-tests:
+  stage: test
+  image: node:20
+  script:
+    - cd languages/javascript
+    - npm test
+
+typescript-tests:
+  stage: test
+  image: node:20
+  script:
+    - cd languages/typescript
+    - npm install --no-audit --no-fund
+    - npm test
+
+php-tests:
+  stage: test
+  image: composer:2
+  before_script:
+    - apk add --no-cache php83-cli php83-curl php83-mbstring php83-xml php83-dom php83-xmlwriter php83-tokenizer php83-phar php83-openssl
+    - ln -sf /usr/bin/php83 /usr/bin/php
+  script:
+    - cd languages/php
+    - composer install --no-interaction --prefer-dist
+    - composer test
+
+ruby-tests:
+  stage: test
+  image: ruby:3.3
+  script:
+    - cd languages/ruby
+    - bundle install
+    - bundle exec rspec
