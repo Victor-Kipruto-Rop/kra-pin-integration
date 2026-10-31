@@ -45,12 +45,17 @@ jobs:
           PAYLOAD_PATH: ${{ inputs.payload_path }}
         run: |
           set -euo pipefail
-          case "$PAYLOAD_PATH" in
-            sandbox-fixtures/*.json) ;;
-            *) echo "Payload must be a JSON file under sandbox-fixtures/"; exit 1 ;;
-          esac
-          test -f "$PAYLOAD_PATH"
-          python -m json.tool "$PAYLOAD_PATH" >/dev/null
+          python - "$PAYLOAD_PATH" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          fixture_root = Path("sandbox-fixtures").resolve()
+          fixture = Path(sys.argv[1]).resolve(strict=True)
+          if not fixture.is_relative_to(fixture_root) or fixture.suffix != ".json":
+              raise SystemExit("Payload must resolve to a JSON file inside sandbox-fixtures/")
+          json.loads(fixture.read_text(encoding="utf-8"))
+          PY
       - name: Install runtime dependencies
         run: python -m pip install -r server/requirements.txt
       - name: Execute one confirmed sandbox operation
