@@ -44,7 +44,7 @@ curl -X POST http://localhost:8000/v1/pin/verify \
 
 ## Run locally
 
-Start with one implementation at a time. Set `KRA_MOCK=true` and a non-empty `PROXY_API_KEYS`. In mock mode, `A000000000B` is the demo PIN and `00000000` is the demo taxpayer ID.
+Start with one implementation at a time. Set `KRA_MOCK=true` and a non-empty `PROXY_API_KEYS`. Legacy PIN convenience routes in Python, Java, JavaScript, TypeScript, PHP and Ruby have demo values `A000000000B` and `00000000`. The Go template exposes the catalog dispatcher; generic catalog calls return 501 in mock mode rather than fabricating results.
 
 - Python: follow [docs/getting-started.md](docs/getting-started.md).
 - Go: `cd languages/go && go test ./... && go run .`
@@ -100,7 +100,7 @@ Mutating operations (TCC application, NIL/TOT filing, the three withholding PRN 
 
 ### Explicit upstream mappings
 
-Set KRA_SERVICE_PATHS_JSON to a JSON object mapping service IDs to exact paths from the current official KRA API documentation. Optionally set KRA_SERVICE_METHODS_JSON (default POST; GET and POST supported). An empty mapping is safe by default and returns 501 rather than guessing endpoint paths. Authorization uses the existing server-side OAuth client-credentials flow.
+Set KRA_SERVICE_PATHS_JSON to a JSON object mapping service IDs to exact paths from the current official KRA API documentation. Optionally set KRA_SERVICE_METHODS_JSON (default POST; GET and POST supported). Set KRA_ETIMS_BASE_URL to the approved eTIMS OSCU HTTPS host; do not assume it is the same as the general GavaConnect host. An empty mapping is safe by default and returns 501 rather than guessing endpoint paths. Authorization uses the existing server-side OAuth client-credentials flow.
 
 Example structure only — these are placeholders, not real KRA paths:
 
