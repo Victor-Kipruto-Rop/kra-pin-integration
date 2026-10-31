@@ -49,8 +49,6 @@ final class DirectOscuClientTest extends TestCase
         self::assertSame('https://sbx.kra.go.ke/etims-oscu/api/v1/branchList', $calls[1]['url']);
         self::assertSame('Bearer token', $calls[1]['headers']['Authorization']);
     }
-}
-
 
     public function testMutatingServerAndMalformedResponsesAreUnknownOutcomes(): void
     {
@@ -75,3 +73,5 @@ final class DirectOscuClientTest extends TestCase
             }
         }
     }
+
+}
