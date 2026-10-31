@@ -102,10 +102,13 @@ def create_app(settings: Settings | None = None, client=None, oscu_client=None, 
                 log.error("idempotency_store_unavailable operation=record_failure")
             raise
         except Exception:
+            # Once the operation coroutine has started, an unexpected failure may
+            # have happened after the upstream accepted a mutation. Fail closed:
+            # keep this key blocked until an operator reconciles the upstream state.
             try:
-                await store.release(cache_key, fingerprint)
+                await store.mark_unknown(cache_key, fingerprint)
             except Exception:
-                log.error("idempotency_store_unavailable operation=release")
+                log.error("idempotency_store_unavailable operation=record_unknown")
             raise
         try:
             await store.complete(cache_key, fingerprint, response)
@@ -211,7 +214,7 @@ def create_app(settings: Settings | None = None, client=None, oscu_client=None, 
             return await execute_idempotently(
                 cache_key, fingerprint,
                 lambda: kra.invoke_catalog_service(service_id, payload),
-                {"upstream_timeout"},
+                {"upstream_timeout", "upstream_unreachable", "upstream_error", "kra_upstream_error", "unexpected_response"},
             )
         return await kra.invoke_catalog_service(service_id, payload)
 
@@ -248,7 +251,7 @@ def create_app(settings: Settings | None = None, client=None, oscu_client=None, 
             return await execute_idempotently(
                 cache_key, fingerprint,
                 lambda: oscu.invoke(operation_id, payload, tenant_headers),
-                {"oscu_outcome_unknown"},
+                {"oscu_outcome_unknown", "oscu_upstream_unreachable", "oscu_upstream_error", "oscu_unexpected_response"},
             )
         return await oscu.invoke(operation_id, payload, tenant_headers)
 
