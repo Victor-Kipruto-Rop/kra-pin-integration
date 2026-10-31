@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 from . import __version__
 from .config import Settings, load_settings, validate_settings
 from .kra_client import KraClient, KraError, MockKraClient, PinResult
+from .oscu_client import DirectOscuClient
 from .ratelimit import RateLimiter
 from .schemas import PinByIdRequest, PinVerifyRequest, VerifyResponse, normalize_pin
 from .security import api_key_matches, mask_pin
@@ -20,7 +21,7 @@ from .security import api_key_matches, mask_pin
 log = logging.getLogger("kra_pin")
 
 
-def create_app(settings: Settings | None = None, client=None) -> FastAPI:
+def create_app(settings: Settings | None = None, client=None, oscu_client=None) -> FastAPI:
     settings = settings or load_settings()
     validate_settings(settings)
     limiter = RateLimiter(settings.rate_limit_per_minute)
@@ -28,11 +29,14 @@ def create_app(settings: Settings | None = None, client=None) -> FastAPI:
     idempotency_lock = asyncio.Lock()
     service_mutates = {"authorization": False, "pin-checker-by-pin": False, "pin-checker-by-id": False, "fetch-taxpayer-obligations": False, "know-kra-tax-service-office": False, "tax-compliance-certificate-application": True, "tax-compliance-certificate-checker": False, "vat-exemption-checker": False, "it-exemption-checker": False, "nil-return-filing": True, "tot-return-filing": True, "income-tax-withholding-prn-generation": True, "vat-withholding-prn-generation": True, "rental-withholding-prn-generation": True, "excise-license-checker-by-pin": False, "excise-license-checker-by-certificate-number": False, "customs-declaration-status-checker": False, "customs-tax-calculator": False, "import-certificate-checker-by-pin": False, "import-certificate-checker-by-cert-number": False, "invoice-checker": False, "etims-oscu-integrator-automated-testing": True}
     kra = client or (MockKraClient() if settings.mock else KraClient(settings))
+    oscu = oscu_client or (DirectOscuClient(settings) if settings.etims_oscu_enabled else None)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
         yield
         await kra.aclose()
+        if oscu is not None:
+            await oscu.aclose()
 
     app = FastAPI(
         title="KRA PIN Integration Template",
