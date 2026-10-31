@@ -1,0 +1,182 @@
+{
+  "version": "1.0.0",
+  "note": "Service IDs are stable proxy identifiers. KRA upstream paths, methods, payload schemas and response schemas must be populated from the current official GavaConnect/eTIMS specifications; no upstream paths are assumed.",
+  "services": [
+    {
+      "id": "authorization",
+      "name": "Authorization",
+      "category": "authentication",
+      "mutating": false,
+      "requiresConsent": true,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "id": "pin-checker-by-pin",
+      "name": "PIN Checker by PIN",
+      "category": "checker",
+      "mutating": false,
+      "requiresConsent": true,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "id": "pin-checker-by-id",
+      "name": "PIN Checker BY ID",
+      "category": "checker",
+      "mutating": false,
+      "requiresConsent": true,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "id": "fetch-taxpayer-obligations",
+      "name": "Fetch Taxpayer Obligations",
+      "category": "checker",
+      "mutating": false,
+      "requiresConsent": true,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "id": "know-kra-tax-service-office",
+      "name": "Know KRA Tax Service Office",
+      "category": "checker",
+      "mutating": false,
+      "requiresConsent": true,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "id": "tax-compliance-certificate-application",
+      "name": "Tax Compliance Certificate Application",
+      "category": "compliance",
+      "mutating": true,
+      "requiresConsent": true,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "id": "tax-compliance-certificate-checker",
+      "name": "Tax Compliance Certificate Checker",
+      "category": "checker",
+      "mutating": false,
+      "requiresConsent": true,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "id": "vat-exemption-checker",
+      "name": "VAT Exemption Checker",
+      "category": "checker",
+      "mutating": false,
+      "requiresConsent": true,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "id": "it-exemption-checker",
+      "name": "IT Exemption checker",
+      "category": "checker",
+      "mutating": false,
+      "requiresConsent": true,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "id": "nil-return-filing",
+      "name": "NIL Return Filling",
+      "category": "returns",
+      "mutating": true,
+      "requiresConsent": true,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "id": "tot-return-filing",
+      "name": "TOT Return Filing",
+      "category": "returns",
+      "mutating": true,
+      "requiresConsent": true,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "id": "income-tax-withholding-prn-generation",
+      "name": "Income Tax Withholding PRN Generation",
+      "category": "payments",
+      "mutating": true,
+      "requiresConsent": true,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "id": "vat-withholding-prn-generation",
+      "name": "VAT Withholding PRN Generation",
+      "category": "payments",
+      "mutating": true,
+      "requiresConsent": true,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "id": "rental-withholding-prn-generation",
+      "name": "Rental Withholding PRN Generation",
+      "category": "payments",
+      "mutating": true,
+      "requiresConsent": true,
+      "requiresIdempotencyKey": true
+    },
+    {
+      "id": "excise-license-checker-by-pin",
+      "name": "Excise License Checker By Pin",
+      "category": "checker",
+      "mutating": false,
+      "requiresConsent": true,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "id": "excise-license-checker-by-certificate-number",
+      "name": "Excise License Checker By Certificate Number",
+      "category": "checker",
+      "mutating": false,
+      "requiresConsent": true,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "id": "customs-declaration-status-checker",
+      "name": "Customs Declaration Status Checker",
+      "category": "customs",
+      "mutating": false,
+      "requiresConsent": true,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "id": "customs-tax-calculator",
+      "name": "Customs Tax Calculator",
+      "category": "customs",
+      "mutating": false,
+      "requiresConsent": true,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "id": "import-certificate-checker-by-pin",
+      "name": "Import Certificate Checker by PIN",
+      "category": "checker",
+      "mutating": false,
+      "requiresConsent": true,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "id": "import-certificate-checker-by-cert-number",
+      "name": "Import Certificate Checker by Cert Number",
+      "category": "checker",
+      "mutating": false,
+      "requiresConsent": true,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "id": "invoice-checker",
+      "name": "Invoice Checker",
+      "category": "checker",
+      "mutating": false,
+      "requiresConsent": true,
+      "requiresIdempotencyKey": false
+    },
+    {
+      "id": "etims-oscu-integrator-automated-testing",
+      "name": "eTIMS OSCU Integrator Automated Testing",
+      "category": "etims",
+      "mutating": true,
+      "requiresConsent": true,
+      "requiresIdempotencyKey": true
+    }
+  ]
+}
