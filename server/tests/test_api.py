@@ -172,3 +172,10 @@ def test_production_requires_idempotency_encryption_key():
             proxy_api_keys=("production-key",),
             idempotency_redis_url="rediss://redis.example.invalid:6379/0",
         ))
+
+
+def test_readiness_endpoint_checks_security_store():
+    with TestClient(make_app()) as c:
+        response = c.get("/ready")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ready"}
