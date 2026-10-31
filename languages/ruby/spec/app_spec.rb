@@ -15,6 +15,7 @@ RSpec.describe KraPinApp do
  end
 end
 
+RSpec.describe KraPinApp do
  it 'requires consent and idempotency for mutating catalog operations' do
   app=KraPinApp.new
   call=->(id,body,idem=nil){env={'REQUEST_METHOD'=>'POST','PATH_INFO'=>"/v1/kra/#{id}",'HTTP_X_API_KEY'=>'ci-test-key','rack.input'=>StringIO.new(body)};env['HTTP_IDEMPOTENCY_KEY']=idem if idem;app.call(env)}
@@ -22,3 +23,4 @@ end
   expect(call.call('nil-return-filing',JSON.generate(consent:true,payload:{})).first).to eq(400)
   expect(call.call('pin-checker-by-pin',JSON.generate(consent:true,payload:{})).first).to eq(501)
  end
+end
