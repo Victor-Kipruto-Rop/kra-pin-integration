@@ -73,14 +73,14 @@ paths:
                   additionalProperties: true
       responses:
         '200': {description: KRA service response (shape depends on official service schema)}
-        '400': {description: Consent missing or idempotency key required}
+        '400': {description: Consent missing or idempotency key required}\n        '409': {description: Idempotency key was reused with a different payload}
         '401': {description: Invalid proxy key or KRA authorization rejected}
         '404': {description: Unknown service}
         '413': {description: Request body too large}
         '422': {description: Invalid request body}
         '429': {description: Rate limit}
         '501': {description: Service exists in catalog but no verified upstream mapping is configured}
-        '502': {description: KRA upstream error}
+        '502': {description: KRA upstream error}\n        '504': {description: KRA upstream timeout}
   /v1/pin/verify:
     post:
       deprecated: true
