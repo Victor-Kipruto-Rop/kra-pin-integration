@@ -1,26 +1,24 @@
 stages:
   - validate
   - test
-
+  - report
 workflow:
   auto_cancel:
     on_new_commit: interruptible
-
 default:
   interruptible: true
   retry: 1
-
 variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
   npm_config_cache: "$CI_PROJECT_DIR/.npm"
-
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
 catalog-contract:
   stage: validate
   image: python:3.12-slim
   script:
     - python scripts/validate-catalog.py
-    - python -m py_compile scripts/validate-production-config.py
-
+    - python scripts/validate-oscu-contract.py
+    - python -m py_compile scripts/validate-catalog.py scripts/validate-oscu-contract.py scripts/validate-production-config.py scripts/summarize-junit.py
 python-tests:
   stage: test
   image: python:3.12-slim
@@ -29,29 +27,40 @@ python-tests:
     paths: [.cache/pip]
   script:
     - pip install -r server/requirements-dev.txt
-    - cd server && PYTHONPATH=. pytest -q
-
+    - cd server && ruff check . && mkdir -p reports && PYTHONPATH=. pytest -q --junitxml=reports/python-junit.xml
+  artifacts:
+    when: always
+    reports:
+      junit: server/reports/python-junit.xml
+    paths:
+      - server/reports/python-junit.xml
+    expire_in: 14 days
 go-tests:
   stage: test
   image: golang:1.22
   script:
     - cd languages/go
     - go test ./...
-
 java-tests:
   stage: test
   image: maven:3.9-eclipse-temurin-21
   script:
     - cd languages/java
     - mvn -B test
-
+  artifacts:
+    when: always
+    reports:
+      junit: languages/java/target/surefire-reports/TEST-*.xml
+    paths:
+      - languages/java/target/surefire-reports/
+    expire_in: 14 days
 javascript-tests:
   stage: test
   image: node:20
   script:
     - cd languages/javascript
+    - npm install --no-audit --no-fund
     - npm test
-
 typescript-tests:
   stage: test
   image: node:20
@@ -59,7 +68,6 @@ typescript-tests:
     - cd languages/typescript
     - npm install --no-audit --no-fund
     - npm test
-
 php-tests:
   stage: test
   image: composer:2
@@ -67,7 +75,6 @@ php-tests:
     - cd languages/php
     - composer install --no-interaction --prefer-dist
     - composer test
-
 ruby-tests:
   stage: test
   image: ruby:3.3
@@ -75,3 +82,29 @@ ruby-tests:
     - cd languages/ruby
     - bundle install
     - bundle exec rspec
+test-summary:
+  stage: report
+  image: python:3.12-slim
+  when: always
+  needs:
+    - job: python-tests
+      artifacts: true
+    - job: go-tests
+      artifacts: false
+    - job: java-tests
+      artifacts: true
+    - job: javascript-tests
+      artifacts: false
+    - job: typescript-tests
+      artifacts: false
+    - job: php-tests
+      artifacts: false
+    - job: ruby-tests
+      artifacts: false
+  script:
+    - python scripts/summarize-junit.py
+  artifacts:
+    when: always
+    paths:
+      - ci-test-summary.md
+    expire_in: 30 days
