@@ -19,6 +19,13 @@ ROOT = Path(__file__).resolve().parents[1]
 SERVER = ROOT / "server"
 sys.path.insert(0, str(SERVER))
 
+from app.dotenv_loader import load_dotenv  # noqa: E402
+
+try:
+    load_dotenv(ROOT / ".env")
+except ValueError as exc:
+    raise SystemExit(f"Invalid local .env: {exc}") from None
+
 from app.config import Settings  # noqa: E402
 from app.kra_client import KraError  # noqa: E402
 from app.oscu_client import DirectOscuClient  # noqa: E402
