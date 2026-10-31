@@ -6,6 +6,7 @@ import (
  "io"
  "strings"
  "testing"
+ "time"
 )
 
 func TestCatalogContainsAll22Services(t *testing.T) {
