@@ -160,4 +160,41 @@ def create_app(settings: Settings | None = None, client=None, oscu_client=None) 
                 return result
         return await kra.invoke_catalog_service(service_id, payload)
 
+    @app.post("/v1/etims/oscu/{operation_id}", tags=["etims-oscu"])
+    async def invoke_direct_oscu(
+        operation_id: str,
+        body: dict,
+        identity: str = Depends(guard),
+        x_etims_tin: str | None = Header(default=None, alias="X-ETIMS-TIN"),
+        x_etims_bhf_id: str | None = Header(default=None, alias="X-ETIMS-BHF-ID"),
+        x_etims_cmc_key: str | None = Header(default=None, alias="X-ETIMS-CMC-KEY"),
+        idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    ) -> dict:
+        if oscu is None:
+            raise HTTPException(status_code=503, detail="Direct eTIMS OSCU adapter is disabled")
+        if body.get("consent") is not True:
+            raise HTTPException(status_code=400, detail="consent must be true")
+        payload = body.get("payload")
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=422, detail="payload must be a JSON object")
+        operation = oscu.operation(operation_id)
+        if operation is None:
+            raise HTTPException(status_code=404, detail="Unknown direct OSCU operation")
+        if operation.get("mutates") and (not idempotency_key or not 16 <= len(idempotency_key) <= 128):
+            raise HTTPException(status_code=400, detail="Idempotency-Key (16-128 chars) is required")
+        cache_key = hashlib.sha256(f"oscu:{identity}:{operation_id}:{idempotency_key}".encode()).hexdigest() if idempotency_key else None
+        fingerprint = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+        tenant_headers = {"tin": x_etims_tin or "", "bhfId": x_etims_bhf_id or "", "cmcKey": x_etims_cmc_key or ""}
+        if cache_key:
+            async with idempotency_lock:
+                prior = idempotency_cache.get(cache_key)
+                if prior:
+                    if prior[0] != fingerprint:
+                        raise HTTPException(status_code=409, detail="Idempotency-Key was reused with a different payload")
+                    return prior[1]
+                result = await oscu.invoke(operation_id, payload, tenant_headers)
+                idempotency_cache[cache_key] = (fingerprint, result)
+                return result
+        return await oscu.invoke(operation_id, payload, tenant_headers)
+
     return app
