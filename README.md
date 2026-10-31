@@ -2,8 +2,7 @@
 
 > **Release status: NOT PRODUCTION READY — validation required.** See [Production Readiness](PRODUCTION_READINESS.md) for release gates and evidence requirements.
 
-
-Unofficial, server-side integration templates for the 22 KRA developer-catalog services through approved GavaConnect and eTIMS integrations ([developer.go.ke](https://developer.go.ke)). This project is community software and is not affiliated with or endorsed by the Kenya Revenue Authority. It never scrapes iTax. Check current KRA terms and API documentation before going live.
+Unofficial, server-side integration templates for the 22 KRA developer-catalog services through approved GavaConnect integrations ([developer.go.ke](https://developer.go.ke)). This project is community software and is not affiliated with or endorsed by the Kenya Revenue Authority. It never scrapes iTax. Check current KRA terms and API documentation before going live.
 
 ## Supported server implementations
 
@@ -56,9 +55,9 @@ Start with one implementation at a time. Set `KRA_MOCK=true` and a non-empty `PR
 
 Copy each language's `.env.example` to `.env` or export variables in your shell/deployment secret manager. Never commit real credentials.
 
-## Complete 22-service catalog
+## Complete 22-service GavaConnect catalog
 
-Stable proxy IDs and operation classes are defined in contracts/kra-services.json.
+Stable proxy IDs and operation classes are defined in `contracts/kra-services.json`.
 
 | # | KRA service | Proxy service ID | Operation |
 |---:|---|---|---|
@@ -83,11 +82,11 @@ Stable proxy IDs and operation classes are defined in contracts/kra-services.jso
 | 19 | Import Certificate Checker by PIN | import-certificate-checker-by-pin | Read |
 | 20 | Import Certificate Checker by Cert Number | import-certificate-checker-by-cert-number | Read |
 | 21 | Invoice Checker | invoice-checker | Read |
-| 22 | eTIMS OSCU Integrator Automated Testing | etims-oscu-integrator-automated-testing | Test/integration |
+| 22 | eTIMS OSCU Integrator Automated Testing | etims-oscu-integrator-automated-testing | GavaConnect catalog operation |
 
 ### Unified invocation contract
 
-Every language exposes POST /v1/kra/{service-id}, protected by X-API-Key:
+Every language exposes `POST /v1/kra/{service-id}`, protected by `X-API-Key`:
 
 ```json
 {
@@ -96,11 +95,11 @@ Every language exposes POST /v1/kra/{service-id}, protected by X-API-Key:
 }
 ```
 
-Mutating operations (TCC application, NIL/TOT filing, the three withholding PRN generators and eTIMS OSCU automated testing) require an Idempotency-Key header of 16–128 characters. Mock mode does not fabricate successful filing, application or PRN responses; unsupported mappings return HTTP 501.
+Mutating operations (TCC application, NIL/TOT filing, the three withholding PRN generators and eTIMS OSCU automated testing) require an `Idempotency-Key` header of 16–128 characters. Mock mode does not fabricate successful filing, application or PRN responses; unsupported mappings return HTTP 501.
 
 ### Explicit upstream mappings
 
-Set KRA_SERVICE_PATHS_JSON to a JSON object mapping service IDs to exact paths from the current official KRA API documentation. Optionally set KRA_SERVICE_METHODS_JSON (default POST; GET and POST, according to the official service specification). An empty mapping is safe by default and returns 501 rather than guessing endpoint paths. Authorization uses the existing server-side OAuth client-credentials flow.
+Set `KRA_SERVICE_PATHS_JSON` to a JSON object mapping service IDs to exact paths from the current official KRA GavaConnect API documentation. Optionally set `KRA_SERVICE_METHODS_JSON` (default POST; GET and POST, according to the official service specification). An empty mapping is safe by default and returns 501 rather than guessing endpoint paths. Authorization uses the existing server-side OAuth client-credentials flow.
 
 Example structure only — these are placeholders, not real KRA paths:
 
@@ -112,17 +111,21 @@ Example structure only — these are placeholders, not real KRA paths:
 }
 ```
 
-contracts/kra-services.json records stable IDs and safety metadata. Add service-specific payload and response schemas only from current KRA specifications and sandbox examples.
+## Separate direct eTIMS OSCU API
+
+The supplied Postman collection also documents **23 direct OSCU sandbox POST operations** at `https://sbx.kra.go.ke/etims-oscu/api/v1`. This is not the GavaConnect catalog endpoint above and is not wired into the seven-language dispatcher. See [direct OSCU integration notes](docs/etims-oscu-direct-integration.md) and the [machine-readable endpoint inventory](contracts/etims-oscu-direct.endpoints.json).
+
+The inventory captures the token endpoint, methods, paths and header context. A separate direct-OSCU runtime adapter, formal request/response schemas, approved sandbox tests and applicable certification are still required. The supplied collection contains malformed sample JSON and one malformed sales property; see the integration notes. Never reuse GavaConnect bearer tokens or proxy API keys for the direct OSCU host.
+
 ## KRA setup and verification
 
-1. Register at [developer.go.ke](https://developer.go.ke), create the developer application and subscribe to each KRA API your product needs. Not every API is necessarily enabled for every application.
-2. Obtain the current API specification for every subscribed service, including method, path, request schema, response schema, scopes, and error codes.
-3. Configure sandbox consumer credentials securely, set `KRA_MOCK=false`, and populate `KRA_SERVICE_PATHS_JSON` / `KRA_SERVICE_METHODS_JSON` from those official specifications.
-4. Test each read-only and mutating operation separately in the approved sandbox. Verify token expiry, duplicate/idempotency behavior, rejected requests and upstream errors.
-5. For the eTIMS OSCU catalog service, use its verified GavaConnect mapping. Direct OSCU device-protocol integration is separate and requires KRA sandbox testing and certification.
-6. Request production access from KRA and use separately issued production credentials.
+1. Register at [developer.go.ke](https://developer.go.ke), create the developer application and subscribe to each KRA API your product needs.
+2. Obtain the current specification for every subscribed service, including method, path, request/response schemas, scopes and error codes.
+3. Configure sandbox credentials securely and test each read-only and mutating operation separately.
+4. For direct OSCU device-protocol integration, follow the separate KRA OSCU sandbox and certification process.
+5. Request production access from KRA and use separately issued production credentials.
 
-The PIN-specific legacy routes still contain example response mappings such as `PINDATA`, `KRAPIN`, `Name` and error code `30002`; confirm them against sandbox. The 22-service dispatcher passes through the service-specific JSON response and must be paired with verified per-service schemas before release. Do not claim sandbox or production verification until it has actually succeeded.
+The PIN-specific legacy routes still contain example response mappings; confirm them against sandbox. Do not claim sandbox or production verification until it has actually succeeded.
 
 ## Security and limitations
 
@@ -133,13 +136,14 @@ The PIN-specific legacy routes still contain example response mappings such as `
 - In-memory token caches and rate limiters are process-local. Use Redis or gateway enforcement for multiple replicas.
 - A PIN match is not proof of identity or tax compliance.
 - Mock tests are not KRA certification. Production use is subject to KRA approval and current terms.
-- The generic catalog routes are implemented, but live upstream integration is enabled only after verified service-path, method, payload and response mappings are configured. The catalog does not imply KRA production approval.
 
 ## Documentation
 
 - [Architecture](docs/architecture.md)
 - [OpenAPI contract](contracts/openapi.yaml)
 - [KRA 22-service integration guide](docs/kra-catalog-integration.md)
+- [Direct eTIMS OSCU integration](docs/etims-oscu-direct-integration.md)
+- [Direct OSCU endpoint inventory](contracts/etims-oscu-direct.endpoints.json)
 - [Language guides](docs/language-guides/README.md)
 - [Security](docs/security.md)
 - [Production readiness assessment](PRODUCTION_READINESS.md)
@@ -149,12 +153,3 @@ The PIN-specific legacy routes still contain example response mappings such as `
 - [Feature parity](FEATURE_PARITY.md)
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md). MIT license.
-
-## CI options
-
-The repository includes GitHub Actions and a `.gitlab-ci.yml` pipeline. If GitHub Actions runner availability or billing prevents jobs from starting, import or mirror this repository into GitLab and use the included pipeline to run catalog validation and all seven language test suites. The GitLab pipeline has not been executed from this ChatGPT session; it must be run in your GitLab project before treating CI as passed.
-
-
-### Configured sandbox service: VAT Exemption Checker
-
-The supplied KRA Postman collection documents `POST /dtd/checker/v1/vatexemption` with bearer authentication and the exact JSON property `VatExemptionCertificateNo`. It is now configured in the service mapping template and has a request schema at [contracts/schemas/vat-exemption-checker.request.schema.json](contracts/schemas/vat-exemption-checker.request.schema.json). Invoke the proxy using `POST /v1/kra/vat-exemption-checker` with `{"consent":true,"payload":{"VatExemptionCertificateNo":"YOUR_SANDBOX_CERTIFICATE_NUMBER"}}`. The shared OAuth client obtains the token server-side. No response example was supplied; a successful sandbox call and response/error schema remain unverified.
