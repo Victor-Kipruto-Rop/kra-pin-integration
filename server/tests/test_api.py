@@ -184,3 +184,115 @@ def test_readiness_endpoint_checks_security_store():
 def test_non_finite_upstream_timeout_is_rejected():
     with pytest.raises(ConfigError, match="KRA_TIMEOUT_SECONDS"):
         validate_settings(Settings(mock=True, proxy_api_keys=("test-key",), timeout_seconds=float("nan")))
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        KraError(504, "upstream_timeout", "KRA timed out"),
+        KraError(502, "upstream_unreachable", "KRA connection failed"),
+        KraError(502, "kra_upstream_error", "KRA returned an upstream error"),
+        KraError(502, "unexpected_response", "KRA response was malformed"),
+    ],
+)
+def test_ambiguous_catalog_mutation_outcome_is_never_resubmitted(error):
+    class AmbiguousCatalogClient:
+        def __init__(self):
+            self.calls = 0
+
+        async def invoke_catalog_service(self, service_id, payload):
+            self.calls += 1
+            raise error
+
+        async def aclose(self):
+            return None
+
+    fake = AmbiguousCatalogClient()
+    app = create_app(
+        Settings(mock=False, proxy_api_keys=("test-key",), pin_key="consumer", pin_secret="secret"),
+        client=fake,
+    )
+    headers = {**KEY, "Idempotency-Key": "ambiguous-mutation-0001"}
+    with TestClient(app) as c:
+        first = c.post(
+            "/v1/kra/nil-return-filing",
+            json={"consent": True, "payload": {"period": "2026"}},
+            headers=headers,
+        )
+        replay = c.post(
+            "/v1/kra/nil-return-filing",
+            json={"consent": True, "payload": {"period": "2026"}},
+            headers=headers,
+        )
+    assert first.status_code in (502, 504)
+    assert replay.status_code == 409
+    assert "outcome is unknown" in replay.json()["detail"]
+    assert fake.calls == 1
+
+
+def test_unexpected_failure_after_mutation_starts_is_marked_unknown():
+    class CrashingCatalogClient:
+        def __init__(self):
+            self.calls = 0
+
+        async def invoke_catalog_service(self, service_id, payload):
+            self.calls += 1
+            raise RuntimeError("simulated post-send failure")
+
+        async def aclose(self):
+            return None
+
+    fake = CrashingCatalogClient()
+    app = create_app(
+        Settings(mock=False, proxy_api_keys=("test-key",), pin_key="consumer", pin_secret="secret"),
+        client=fake,
+    )
+    headers = {**KEY, "Idempotency-Key": "unexpected-failure-0001"}
+    with TestClient(app, raise_server_exceptions=False) as c:
+        first = c.post(
+            "/v1/kra/nil-return-filing",
+            json={"consent": True, "payload": {"period": "2026"}},
+            headers=headers,
+        )
+        replay = c.post(
+            "/v1/kra/nil-return-filing",
+            json={"consent": True, "payload": {"period": "2026"}},
+            headers=headers,
+        )
+    assert first.status_code == 500
+    assert replay.status_code == 409
+    assert "outcome is unknown" in replay.json()["detail"]
+    assert fake.calls == 1
+
+
+def test_definitive_upstream_rejection_releases_mutation_reservation():
+    class RejectingCatalogClient:
+        def __init__(self):
+            self.calls = 0
+
+        async def invoke_catalog_service(self, service_id, payload):
+            self.calls += 1
+            raise KraError(422, "invalid_payload", "KRA rejected the request")
+
+        async def aclose(self):
+            return None
+
+    fake = RejectingCatalogClient()
+    app = create_app(
+        Settings(mock=False, proxy_api_keys=("test-key",), pin_key="consumer", pin_secret="secret"),
+        client=fake,
+    )
+    headers = {**KEY, "Idempotency-Key": "definitive-rejection-0001"}
+    with TestClient(app) as c:
+        first = c.post(
+            "/v1/kra/nil-return-filing",
+            json={"consent": True, "payload": {"period": "invalid"}},
+            headers=headers,
+        )
+        second = c.post(
+            "/v1/kra/nil-return-filing",
+            json={"consent": True, "payload": {"period": "invalid"}},
+            headers=headers,
+        )
+    assert first.status_code == second.status_code == 422
+    assert fake.calls == 2
