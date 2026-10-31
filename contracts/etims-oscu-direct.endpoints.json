@@ -1,0 +1,324 @@
+{
+  "title": "KRA direct eTIMS OSCU sandbox endpoints",
+  "status": "inventory only; adapter and sandbox verification pending",
+  "base_url": "https://sbx.kra.go.ke/etims-oscu/api/v1",
+  "token": {
+    "method": "GET",
+    "url": "https://sbx.kra.go.ke/v1/token/generate?grant_type=client_credentials",
+    "authentication": "HTTP Basic; consumer key as username and consumer secret as password"
+  },
+  "operation_auth": "Bearer token",
+  "common_headers": [
+    "tin",
+    "bhfId",
+    "cmcKey",
+    "apigee_app_id"
+  ],
+  "initialization_headers": [
+    "apigee_app_id"
+  ],
+  "operations": [
+    {
+      "id": "branch-insurance-information",
+      "method": "POST",
+      "path": "/branchInsuranceInfo",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
+      "response_schema_status": "not supplied"
+    },
+    {
+      "id": "branch-user-account",
+      "method": "POST",
+      "path": "/branchUserAccount",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
+      "response_schema_status": "not supplied"
+    },
+    {
+      "id": "branch-send-customer-information",
+      "method": "POST",
+      "path": "/branchSendCustomerInfo",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
+      "response_schema_status": "not supplied"
+    },
+    {
+      "id": "branch-list",
+      "method": "POST",
+      "path": "/branchList",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
+      "response_schema_status": "not supplied"
+    },
+    {
+      "id": "select-code-list",
+      "method": "POST",
+      "path": "/selectCodeList",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
+      "response_schema_status": "not supplied"
+    },
+    {
+      "id": "customer-pin-info",
+      "method": "POST",
+      "path": "/customerPinInfo",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
+      "response_schema_status": "not supplied"
+    },
+    {
+      "id": "select-item-classification",
+      "method": "POST",
+      "path": "/selectItemClass",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
+      "response_schema_status": "not supplied"
+    },
+    {
+      "id": "select-taxpayer-information",
+      "method": "POST",
+      "path": "/selectTaxpayerInfo",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
+      "response_schema_status": "not supplied"
+    },
+    {
+      "id": "select-notice-list",
+      "method": "POST",
+      "path": "/selectNoticeList",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
+      "response_schema_status": "not supplied"
+    },
+    {
+      "id": "imported-item-information",
+      "method": "POST",
+      "path": "/importedItemInfo",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
+      "response_schema_status": "not supplied"
+    },
+    {
+      "id": "imported-item-converted-information",
+      "method": "POST",
+      "path": "/importedItemConvertedInfo",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
+      "response_schema_status": "not supplied"
+    },
+    {
+      "id": "oscu-initialization",
+      "method": "POST",
+      "path": "/initialize",
+      "headers": [
+        "apigee_app_id"
+      ],
+      "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
+      "response_schema_status": "not supplied"
+    },
+    {
+      "id": "item-information",
+      "method": "POST",
+      "path": "/itemInfo",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
+      "response_schema_status": "not supplied"
+    },
+    {
+      "id": "save-item-composition",
+      "method": "POST",
+      "path": "/saveItemComposition",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
+      "response_schema_status": "not supplied"
+    },
+    {
+      "id": "save-item",
+      "method": "POST",
+      "path": "/saveItem",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
+      "response_schema_status": "not supplied"
+    },
+    {
+      "id": "get-purchase-transaction-information",
+      "method": "POST",
+      "path": "/getPurchaseTransactionInfo",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
+      "response_schema_status": "not supplied"
+    },
+    {
+      "id": "send-purchase-transaction-information",
+      "method": "POST",
+      "path": "/sendPurchaseTransactionInfo",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
+      "response_schema_status": "not supplied"
+    },
+    {
+      "id": "send-sales-transaction",
+      "method": "POST",
+      "path": "/sendSalesTransaction",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
+      "response_schema_status": "not supplied"
+    },
+    {
+      "id": "select-invoice-detail",
+      "method": "POST",
+      "path": "/selectInvoiceDetail",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
+      "response_schema_status": "not supplied"
+    },
+    {
+      "id": "select-sales-transactions",
+      "method": "POST",
+      "path": "/selectSalesTransactions",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
+      "response_schema_status": "not supplied"
+    },
+    {
+      "id": "insert-stock-io",
+      "method": "POST",
+      "path": "/insert/stockIO",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
+      "response_schema_status": "not supplied"
+    },
+    {
+      "id": "save-stock-master",
+      "method": "POST",
+      "path": "/save/stockMaster",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
+      "response_schema_status": "not supplied"
+    },
+    {
+      "id": "select-stock-move-lists",
+      "method": "POST",
+      "path": "/selectStockMoveLists",
+      "headers": [
+        "tin",
+        "bhfId",
+        "cmcKey",
+        "apigee_app_id"
+      ],
+      "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
+      "response_schema_status": "not supplied"
+    }
+  ],
+  "known_issues": [
+    "Postman raw bodies include // comments and are not valid JSON as pasted.",
+    "sendSalesTransaction sample contains malformed property name 'isr ccCd'; confirm with KRA.",
+    "selectSalesTransactions sample hard-codes bhfId header as 00 while body uses a variable; confirm intent.",
+    "No response examples, OAuth scopes, error codes, rate limits or retry/idempotency semantics supplied."
+  ]
+}
