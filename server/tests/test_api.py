@@ -179,3 +179,8 @@ def test_readiness_endpoint_checks_security_store():
         response = c.get("/ready")
     assert response.status_code == 200
     assert response.json() == {"status": "ready"}
+
+
+def test_non_finite_upstream_timeout_is_rejected():
+    with pytest.raises(ConfigError, match="KRA_TIMEOUT_SECONDS"):
+        validate_settings(Settings(mock=True, proxy_api_keys=("test-key",), timeout_seconds=float("nan")))
