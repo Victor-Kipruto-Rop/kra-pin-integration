@@ -24,10 +24,11 @@ if($isCatalog){
  if(($body['consent']??false)!==true){http_response_code(400);echo json_encode(['detail'=>'consent must be true']);exit;}
  if(!isset($body['payload'])||!is_array($body['payload'])){http_response_code(422);echo json_encode(['detail'=>'payload must be a JSON object']);exit;}
  $idem=$_SERVER['HTTP_IDEMPOTENCY_KEY']??'';if(in_array($serviceId,$mutating,true)&&(strlen($idem)<16||strlen($idem)>128)){http_response_code(400);echo json_encode(['detail'=>'Idempotency-Key (16-128 chars) is required']);exit;}
- $GLOBALS['kra_idempotency_cache']=$GLOBALS['kra_idempotency_cache']??[];$idemKey=$idem!==''?hash('sha256',$key.':'.$serviceId.':'.$idem):'';if($idemKey!==''&&isset($GLOBALS['kra_idempotency_cache'][$idemKey])){echo json_encode($GLOBALS['kra_idempotency_cache'][$idemKey]);exit;}
+ $idemKey=$idem!==''?hash('sha256',$key.':'.$serviceId.':'.$idem):'';
  if($mock){http_response_code(501);echo json_encode(['error'=>['code'=>'mock_service_not_implemented','message'=>'Configure a verified KRA sandbox mapping; no filing or payment mock is fabricated']]);exit;}
- try{$service=new KraPin\KraService($env,false);[$status,$result]=$service->invokeCatalog($serviceId,$body['payload']);if($status===200&&$idemKey!=='')$GLOBALS['kra_idempotency_cache'][$idemKey]=$result;http_response_code($status);echo json_encode($result,JSON_THROW_ON_ERROR);exit;}
- catch(Throwable $e){http_response_code(502);echo json_encode(['error'=>['code'=>'upstream_error','message'=>'KRA service request failed']]);exit;}
+ $idemHandle=null;if($idemKey!==''){$idemFile=sys_get_temp_dir().'/kra-idem-'.$idemKey;$idemHandle=fopen($idemFile,'c+');if($idemHandle===false){http_response_code(503);echo json_encode(['detail'=>'Idempotency store unavailable']);exit;}flock($idemHandle,LOCK_EX);$cachedRaw=stream_get_contents($idemHandle);$cached=$cachedRaw!==''?json_decode($cachedRaw,true):null;if(is_array($cached)) {flock($idemHandle,LOCK_UN);fclose($idemHandle);echo json_encode($cached);exit;}}
+ try{$service=new KraPin\KraService($env,false);[$status,$result]=$service->invokeCatalog($serviceId,$body['payload']);if($status===200&&$idemHandle!==null){ftruncate($idemHandle,0);rewind($idemHandle);fwrite($idemHandle,json_encode($result,JSON_THROW_ON_ERROR));fflush($idemHandle);}if($idemHandle!==null){flock($idemHandle,LOCK_UN);fclose($idemHandle);}http_response_code($status);echo json_encode($result,JSON_THROW_ON_ERROR);exit;}
+ catch(Throwable $e){if($idemHandle!==null){flock($idemHandle,LOCK_UN);fclose($idemHandle);}http_response_code(502);echo json_encode(['error'=>['code'=>'upstream_error','message'=>'KRA service request failed']]);exit;}
 }
 
 $rawBody=file_get_contents('php://input',false,null,0,65537);if(strlen($rawBody)>65536){http_response_code(413);echo json_encode(['detail'=>'Request too large']);exit;}
