@@ -24,7 +24,7 @@ type Config struct {
  Paths, Methods map[string]string
 }
 type Token struct { Value string; Expires time.Time }
-type CachedResponse struct { Status int; Body any; Fingerprint string }
+type CachedResponse struct { Status int; Body any; Fingerprint string; State string }
 var tokenCache=struct{sync.Mutex; m map[string]Token}{m:map[string]Token{}}
 var idemCache=struct{sync.Mutex; m map[string]CachedResponse}{m:map[string]CachedResponse{}}
 var serviceMutates=map[string]bool{
@@ -75,7 +75,7 @@ func invoke(c Config,client *http.Client,service string,payload map[string]any)(
  target,err:=url.Parse(strings.TrimRight(upstreamBase,"/")+path);if err!=nil{return 0,nil,err};if method=="GET"{query:=target.Query();for k,v:=range payload{switch v.(type){case nil:continue;case string,bool,float64,json.Number:query.Set(k,fmt.Sprint(v));default:return 422,map[string]string{"detail":"GET query payload values must be scalar"},nil}};target.RawQuery=query.Encode()}
  tok,err:=getToken(c,client);if err!=nil{return 0,nil,err}
  send:=func(token string)(*http.Response,error){var body io.Reader;if method=="POST"{b,e:=json.Marshal(payload);if e!=nil{return nil,e};body=bytes.NewReader(b)};req,e:=http.NewRequest(method,target.String(),body);if e!=nil{return nil,e};req.Header.Set("Authorization","Bearer "+token);if method=="POST"{req.Header.Set("Content-Type","application/json")};return client.Do(req)}
- resp,err:=send(tok);if err!=nil{return 0,nil,err};if resp.StatusCode==401{resp.Body.Close();tokenCache.Lock();delete(tokenCache.m,c.Key);tokenCache.Unlock();tok,err=getToken(c,client);if err!=nil{return 0,nil,err};resp,err=send(tok);if err!=nil{return 0,nil,err}}
+ resp,err:=send(tok);if err!=nil{return 0,nil,err};if resp.StatusCode==401&&!serviceMutates[service]{resp.Body.Close();tokenCache.Lock();delete(tokenCache.m,c.Key);tokenCache.Unlock();tok,err=getToken(c,client);if err!=nil{return 0,nil,err};resp,err=send(tok);if err!=nil{return 0,nil,err}}
  defer resp.Body.Close();raw,err:=io.ReadAll(io.LimitReader(resp.Body,2<<20));if err!=nil{return 0,nil,err};var result any;if len(raw)>0{if err=json.Unmarshal(raw,&result);err!=nil{return 502,map[string]string{"code":"invalid_upstream_response","message":"KRA returned non-JSON content"},nil}}
  if resp.StatusCode==429{return 429,result,nil};if resp.StatusCode>=400{return 502,map[string]any{"error":map[string]any{"code":"kra_upstream_error","message":"KRA service request failed","upstream_status":resp.StatusCode}},nil};return 200,result,nil
 }
@@ -87,10 +87,23 @@ func serviceHandler(c Config,client *http.Client,limiter *Limiter) http.HandlerF
   var body struct{Consent bool `json:"consent"`;Payload map[string]any `json:"payload"`};if json.Unmarshal(bodyBytes,&body)!=nil{write(w,422,map[string]string{"detail":"Invalid JSON"});return}
   if !body.Consent{write(w,400,map[string]string{"detail":"consent must be true"});return};if body.Payload==nil{write(w,422,map[string]string{"detail":"payload must be a JSON object"});return}
   idem:=r.Header.Get("Idempotency-Key");if mutates&&(len(idem)<16||len(idem)>128){write(w,400,map[string]string{"detail":"Idempotency-Key (16-128 chars) is required"});return}
-  idemKey:="";fingerprintBytes,_:=json.Marshal(body.Payload);fingerprintSum:=sha256.Sum256(fingerprintBytes);fingerprint:=hex.EncodeToString(fingerprintSum[:]);if idem!=""{sum:=sha256.Sum256([]byte(key+":"+service+":"+idem));idemKey=hex.EncodeToString(sum[:]);idemCache.Lock();cached,exists:=idemCache.m[idemKey];idemCache.Unlock();if exists{if cached.Fingerprint!=fingerprint{write(w,409,map[string]string{"code":"idempotency_conflict","message":"Idempotency-Key was already used with a different payload"});return};write(w,cached.Status,cached.Body);return}}
-  if c.Mock{write(w,501,map[string]string{"code":"mock_service_not_implemented","message":"No fabricated mock response; configure verified KRA sandbox mapping"});return}
-  status,data,err:=invoke(c,client,service,body.Payload);if err!=nil{write(w,502,map[string]string{"code":"upstream_error","message":"KRA service request failed"});return}
-  if idemKey!=""&&status==200{idemCache.Lock();idemCache.m[idemKey]=CachedResponse{Status:status,Body:data,Fingerprint:fingerprint};idemCache.Unlock()};write(w,status,data)
+  idemKey:="";fingerprintBytes,_:=json.Marshal(body.Payload);fingerprintSum:=sha256.Sum256(fingerprintBytes);fingerprint:=hex.EncodeToString(fingerprintSum[:]);if idem!=""{
+   sum:=sha256.Sum256([]byte(key+":"+service+":"+idem));idemKey=hex.EncodeToString(sum[:])
+   idemCache.Lock();cached,exists:=idemCache.m[idemKey]
+   if exists {
+    idemCache.Unlock()
+    if cached.Fingerprint!=fingerprint{write(w,409,map[string]string{"code":"idempotency_conflict","message":"Idempotency-Key was already used with a different payload"});return}
+    if cached.State=="unknown"{write(w,409,map[string]string{"code":"idempotency_outcome_unknown","message":"Previous request outcome is unknown; reconcile with KRA before retrying"});return}
+    if cached.State=="pending"{write(w,409,map[string]string{"code":"idempotency_in_progress","message":"A request with this Idempotency-Key is already in progress"});return}
+    if cached.State=="complete"{write(w,cached.Status,cached.Body);return}
+   }
+   idemCache.m[idemKey]=CachedResponse{Fingerprint:fingerprint,State:"pending"};idemCache.Unlock()
+  }
+  if c.Mock{if idemKey!=""{idemCache.Lock();delete(idemCache.m,idemKey);idemCache.Unlock()};write(w,501,map[string]string{"code":"mock_service_not_implemented","message":"No fabricated mock response; configure verified KRA sandbox mapping"});return}
+  status,data,err:=invoke(c,client,service,body.Payload)
+  if err!=nil{if idemKey!=""{idemCache.Lock();entry:=idemCache.m[idemKey];entry.State="unknown";idemCache.m[idemKey]=entry;idemCache.Unlock()};write(w,502,map[string]string{"code":"upstream_error","message":"KRA service request failed"});return}
+  if idemKey!=""{idemCache.Lock();if status==200{idemCache.m[idemKey]=CachedResponse{Status:status,Body:data,Fingerprint:fingerprint,State:"complete"}}else if status>=500{entry:=idemCache.m[idemKey];entry.State="unknown";idemCache.m[idemKey]=entry}else{delete(idemCache.m,idemKey)};idemCache.Unlock()}
+  write(w,status,data)
  }
 }
 func main(){
