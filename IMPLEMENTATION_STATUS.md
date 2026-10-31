@@ -32,3 +32,12 @@
 
 ## Release policy
 Do not merge as production-ready or deploy real taxpayer data until all release gates in [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) are evidenced for the exact release commit. Mock-mode tests are not production verification.
+
+
+## Direct OSCU and shared-state update
+
+- Seven language-specific direct OSCU sandbox SDK clients now exist and use the same 23-operation manifest.
+- Added a language-neutral direct OSCU OpenAPI document and CI manifest parity validation.
+- Python FastAPI uses Redis-backed distributed rate limiting and idempotency when configured; cached KRA responses are Fernet-encrypted, tenant-scoped OSCU keys prevent cross-tenant replay, and the readiness endpoint checks security-store availability.
+- Added a Redis-backed local Docker Compose stack and production preflight requirements.
+- These changes have not passed a functioning CI runner yet. Live KRA sandbox testing, formal schemas and certification remain pending.
