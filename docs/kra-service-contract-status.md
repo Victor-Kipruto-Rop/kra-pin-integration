@@ -3,8 +3,8 @@
 The proxy exposes stable service IDs for the full developer-catalog list. This document separates **catalog coverage** from **verified upstream implementation**.
 
 - Catalog registration: implemented in all seven templates.
-- Request/response schema: pending the official, current KRA API specification for each service.
-- Upstream path and HTTP method: intentionally unconfigured until copied from the subscribed API's official specification.
+- Request/response schema: being added as official per-service Postman contracts are supplied; response examples remain outstanding for the two documented services.
+- Upstream path and HTTP method: configured only for services with supplied official Postman contracts; all others remain intentionally unconfigured.
 - Sandbox verification: not yet performed; approved application credentials and test data are required.
 
 Do not infer API paths, scopes, request fields, response fields, not-found codes or mutation semantics from the service display names.
@@ -18,7 +18,7 @@ Do not infer API paths, scopes, request fields, response fields, not-found codes
 | Know KRA Tax Service Office | `know-kra-tax-service-office` | Awaiting official specification and sandbox test |
 | Tax Compliance Certificate Application | `tax-compliance-certificate-application` | Awaiting official specification and sandbox test |
 | Tax Compliance Certificate Checker | `tax-compliance-certificate-checker` | Awaiting official specification and sandbox test |
-| VAT Exemption Checker | `vat-exemption-checker` | Awaiting official specification and sandbox test |
+| VAT Exemption Checker | `vat-exemption-checker` | Postman contract supplied; sandbox execution still pending |
 | IT Exemption checker | `it-exemption-checker` | Awaiting official specification and sandbox test |
 | NIL Return Filling | `nil-return-filing` | Awaiting official specification and sandbox test |
 | TOT Return Filing | `tot-return-filing` | Awaiting official specification and sandbox test |
