@@ -25,8 +25,8 @@ Every language is an independent server application and calls KRA directly. The 
 |---|---|---|
 | GET | `/health` | Health and environment |
 | POST | `/v1/kra/{service-id}` | Invoke any of the 22 catalog services |
-| POST | `/v1/pin/verify` | Legacy PIN verification route |
-| POST | `/v1/pin/verify-by-id` | Legacy PIN-by-ID route |
+| POST | `/v1/pin/verify` | Legacy convenience route in Python, Java, JavaScript, TypeScript, PHP and Ruby |
+| POST | `/v1/pin/verify-by-id` | Legacy convenience route in Python, Java, JavaScript, TypeScript, PHP and Ruby |
 
 Protected routes require `X-API-Key` and `consent: true` by default. Success response shape:
 
