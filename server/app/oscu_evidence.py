@@ -47,7 +47,7 @@ def build_evidence(
     payload: dict[str, Any],
     response: Any,
     tenant_context: dict[str, str],
-    idempotency_key: str | None,
+    change_reference: str | None,
     timestamp: str,
 ) -> dict[str, Any]:
     """Build evidence that never contains request/response values or secrets."""
@@ -69,7 +69,7 @@ def build_evidence(
             "branch_id_present": bool(tenant_context.get("bhfId")),
             "cmc_key_present": bool(tenant_context.get("cmcKey")),
         },
-        "idempotency_key_sha256": canonical_sha256(idempotency_key) if idempotency_key else None,
+        "change_reference_sha256": canonical_sha256(change_reference) if change_reference else None,
         "response": {
             "sha256": canonical_sha256(response),
             "shape": response_shape(response),
