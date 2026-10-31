@@ -15,7 +15,7 @@ export async function lookup(byId,v,type='KE'){if(mock){let found=byId?v==='0000
  let k=process.env[byId?'KRA_PIN_BY_ID_CONSUMER_KEY':'KRA_PIN_CONSUMER_KEY']||process.env.KRA_PIN_CONSUMER_KEY,s=process.env[byId?'KRA_PIN_BY_ID_CONSUMER_SECRET':'KRA_PIN_CONSUMER_SECRET']||process.env.KRA_PIN_CONSUMER_SECRET,t=await token(k,s),path=byId?'/checker/v1/pin':'/checker/v1/pinbypin',payload=byId?{TaxpayerType:type,TaxpayerID:v}:{KRAPIN:v},r=await fetch(base+path,{method:'POST',headers:{authorization:'Bearer '+t,'content-type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(15000)}),d=await r.json();
  if(r.status===404||String(d.errorCode)==='30002')return {found:false,pin:null,taxpayer_name:null,environment:env,mock:false,raw:null};let x=d.PINDATA||d,pin=x.KRAPIN||null,name=x.Name||null;if(!r.ok||(!pin&&!name))throw Error('Unexpected KRA response shape');return {found:true,pin,taxpayer_name:name,environment:env,mock:false,raw:null};}
 async function invokeService(req,res,id,k){
- if(!(id in services))return send(res,404,{detail:'Unknown KRA service'});
+ if(!Object.hasOwn(services,id))return send(res,404,{detail:'Unknown KRA service'});
  let body;try{body=await read(req);}catch(e){return send(res,e?.status||422,{detail:e instanceof SyntaxError?'Invalid JSON':'Invalid request body'});}
  if(body.consent!==true)return send(res,400,{detail:'consent must be true'});
  if(!body.payload||typeof body.payload!=='object'||Array.isArray(body.payload))return send(res,422,{detail:'payload must be a JSON object'});
