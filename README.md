@@ -180,3 +180,14 @@ Mutating KRA and direct OSCU operations now use a shared idempotency store abstr
 | Ruby | `languages/ruby/oscu_client.rb` | `languages/ruby/spec/oscu_client_spec.rb` |
 
 All seven clients load the same endpoint inventory, reject unknown operation IDs, require explicit confirmation for operations provisionally classified as mutating, and avoid automatic retries. They use only the KRA sandbox host. Their manifest copies and the language-neutral OpenAPI file are checked by `scripts/validate-oscu-contract.py`. The SDKs are not substitutes for KRA-issued schemas, certification or production approval.
+
+
+## Run the full local CI matrix
+
+If GitHub Actions cannot allocate runners, run the same seven-language checks locally:
+
+```bash
+bash scripts/ci-local.sh
+```
+
+Use `bash scripts/ci-local.sh --skip-install` when dependencies are already installed, or `bash scripts/ci-local.sh --validation-only` for static catalog/contract validation and Python syntax checks. See [Local CI and release validation](docs/ci-local-validation.md) for prerequisites, GitLab CI fallback and sandbox evidence handling. A local pass is not KRA certification or production approval.
