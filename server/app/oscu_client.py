@@ -113,12 +113,15 @@ class DirectOscuClient:
             raise KraError(503, "oscu_rate_limited", "KRA OSCU rate limit reached; retry later")
         if response.status_code >= 500:
             raise KraError(502, "oscu_upstream_error", f"KRA OSCU returned HTTP {response.status_code}")
-        try:
-            data = response.json()
-        except ValueError as exc:
-            raise KraError(502, "oscu_unexpected_response", "KRA OSCU returned a non-JSON response") from exc
-        if not isinstance(data, dict):
-            raise KraError(502, "oscu_unexpected_response", "KRA OSCU returned an unexpected JSON shape")
+        if not response.content:
+            data = None
+        else:
+            try:
+                data = response.json()
+            except ValueError as exc:
+                raise KraError(
+                    502, "oscu_unexpected_response", "KRA OSCU returned a non-JSON response"
+                ) from exc
         if response.status_code >= 400:
             # Do not relay untrusted upstream error content or taxpayer data.
             raise KraError(422, "oscu_request_rejected", f"KRA OSCU rejected the request (HTTP {response.status_code})")
