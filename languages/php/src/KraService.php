@@ -16,9 +16,9 @@ final class KraService {
   $this->serviceMethods=json_decode(getenv('KRA_SERVICE_METHODS_JSON')?:'{}',true,512,JSON_THROW_ON_ERROR);
  }
  private function request(string $url,array $headers=[],?array $payload=null,string $method='GET'):array {
-  $ch=curl_init($url);$h=$headers;
-  if($payload!==null)$h[]='Content-Type: application/json';
-  curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>20,CURLOPT_CONNECTTIMEOUT=>5,CURLOPT_HTTPHEADER=>$h,CURLOPT_CUSTOMREQUEST=>$method,CURLOPT_POSTFIELDS=>$payload===null?null:json_encode($payload,JSON_THROW_ON_ERROR)]);
+  if($method==='GET'&&$payload!==null)$url.=(str_contains($url,'?')?'&':'?').http_build_query($payload);\n  $ch=curl_init($url);$h=$headers;
+  if($method==='POST')$h[]='Content-Type: application/json';
+  curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>20,CURLOPT_CONNECTTIMEOUT=>5,CURLOPT_HTTPHEADER=>$h,CURLOPT_CUSTOMREQUEST=>$method,CURLOPT_POSTFIELDS=>$method==='POST'&&$payload!==null?json_encode($payload,JSON_THROW_ON_ERROR):null]);
   $raw=curl_exec($ch);$status=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);
   if($raw===false){curl_close($ch);throw new \RuntimeException('Upstream unavailable');}
   curl_close($ch);$data=json_decode($raw,true);
@@ -39,13 +39,13 @@ final class KraService {
   $path=$this->servicePaths[$service]??null;
   if(!is_string($path)||!str_starts_with($path,'/')||str_starts_with($path,'//'))return [501,['error'=>['code'=>'service_not_configured','message'=>'No verified KRA endpoint mapping configured']]];
   $method=strtoupper($this->serviceMethods[$service]??'POST');
-  if($method!=='POST')return [501,['detail'=>'Catalog operations currently require POST; configure the official KRA method before use']];
+  if(!in_array($method,['GET','POST'],true)||($method==='GET'&&in_array($service,['tax-compliance-certificate-application','nil-return-filing','tot-return-filing','income-tax-withholding-prn-generation','vat-withholding-prn-generation','rental-withholding-prn-generation','etims-oscu-integrator-automated-testing'],true)))return [501,['detail'=>'Unsupported or unsafe configured HTTP method']];
   $upstreamBase=$service==='etims-oscu-integrator-automated-testing'?(getenv('KRA_ETIMS_BASE_URL')?:''):$this->base;
   $parts=parse_url($upstreamBase);
   if(!is_array($parts)||($parts['scheme']??'')!=='https'||!str_ends_with((string)($parts['host']??''),'.kra.go.ke'))return [501,['error'=>['code'=>'service_base_not_configured','message'=>'Set a verified HTTPS KRA base URL for this service']]];
   $access=$this->token($key,$secret);
-  [$status,$data]=$this->request($upstreamBase.$path,['Authorization: Bearer '.$access],$method==='POST'?$payload:null,$method);
-  if($status===401){$access=$this->token($key,$secret,true);[$status,$data]=$this->request($upstreamBase.$path,['Authorization: Bearer '.$access],$method==='POST'?$payload:null,$method);}
+  [$status,$data]=$this->request(rtrim($upstreamBase,'/').$path,['Authorization: Bearer '.$access],$payload,$method);
+  if($status===401){$access=$this->token($key,$secret,true);[$status,$data]=$this->request(rtrim($upstreamBase,'/').$path,['Authorization: Bearer '.$access],$payload,$method);}
   if($status>=400)return [$status===429?429:502,['error'=>['code'=>'kra_upstream_error','message'=>'KRA service request failed']]];
   return [200,$data];
  }
