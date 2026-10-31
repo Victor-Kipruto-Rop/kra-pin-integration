@@ -124,7 +124,7 @@ def test_catalog_idempotency_replays_same_payload_and_rejects_conflicts():
     class CatalogClient:
         def __init__(self):
             self.calls = 0
-        async def invoke_catalog_service(self, service_id, payload):
+        async def invoke_catalog_service(self, service_id, payload, retry_auth=True):
             self.calls += 1
             return {"service": service_id, "accepted": True}
         async def aclose(self):
@@ -200,7 +200,7 @@ def test_ambiguous_catalog_mutation_outcome_is_never_resubmitted(error):
         def __init__(self):
             self.calls = 0
 
-        async def invoke_catalog_service(self, service_id, payload):
+        async def invoke_catalog_service(self, service_id, payload, retry_auth=True):
             self.calls += 1
             raise error
 
@@ -235,7 +235,7 @@ def test_unexpected_failure_after_mutation_starts_is_marked_unknown():
         def __init__(self):
             self.calls = 0
 
-        async def invoke_catalog_service(self, service_id, payload):
+        async def invoke_catalog_service(self, service_id, payload, retry_auth=True):
             self.calls += 1
             raise RuntimeError("simulated post-send failure")
 
@@ -270,7 +270,7 @@ def test_definitive_upstream_rejection_releases_mutation_reservation():
         def __init__(self):
             self.calls = 0
 
-        async def invoke_catalog_service(self, service_id, payload):
+        async def invoke_catalog_service(self, service_id, payload, retry_auth=True):
             self.calls += 1
             raise KraError(422, "invalid_payload", "KRA rejected the request")
 
