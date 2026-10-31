@@ -24,7 +24,8 @@ def create_app(settings: Settings | None = None, client=None) -> FastAPI:
     settings = settings or load_settings()
     validate_settings(settings)
     limiter = RateLimiter(settings.rate_limit_per_minute)
-    idempotency_cache: dict[str, tuple[str, dict]] = {}\n    idempotency_lock = asyncio.Lock()
+    idempotency_cache: dict[str, tuple[str, dict]] = {}
+    idempotency_lock = asyncio.Lock()
     service_mutates = {"authorization": False, "pin-checker-by-pin": False, "pin-checker-by-id": False, "fetch-taxpayer-obligations": False, "know-kra-tax-service-office": False, "tax-compliance-certificate-application": True, "tax-compliance-certificate-checker": False, "vat-exemption-checker": False, "it-exemption-checker": False, "nil-return-filing": True, "tot-return-filing": True, "income-tax-withholding-prn-generation": True, "vat-withholding-prn-generation": True, "rental-withholding-prn-generation": True, "excise-license-checker-by-pin": False, "excise-license-checker-by-certificate-number": False, "customs-declaration-status-checker": False, "customs-tax-calculator": False, "import-certificate-checker-by-pin": False, "import-certificate-checker-by-cert-number": False, "invoice-checker": False, "etims-oscu-integrator-automated-testing": True}
     kra = client or (MockKraClient() if settings.mock else KraClient(settings))
 
