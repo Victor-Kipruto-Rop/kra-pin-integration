@@ -52,7 +52,7 @@ Use `contracts/kra-service-mappings.template.json` as the GavaConnect catalog in
 
 ## Direct eTIMS OSCU integration (separate from the catalog)
 
-A supplied Postman collection now documents a separate direct OSCU sandbox endpoint inventory: [`contracts/etims-oscu-direct.endpoints.json`](../contracts/etims-oscu-direct.endpoints.json), with notes in [the direct OSCU integration guide](etims-oscu-direct-integration.md). It contains 23 POST operations under `https://sbx.kra.go.ke/etims-oscu/api/v1`. This is **contract capture only**: no direct-OSCU runtime adapter, response schemas, sandbox execution or certification has been completed.
+A supplied Postman collection now documents a separate direct OSCU sandbox endpoint inventory: [`contracts/etims-oscu-direct.endpoints.json`](../contracts/etims-oscu-direct.endpoints.json), with notes in [the direct OSCU integration guide](etims-oscu-direct-integration.md). It contains 23 POST operations under `https://sbx.kra.go.ke/etims-oscu/api/v1`. The Python reference now includes a separate sandbox-only direct OSCU adapter. Formal schemas, live sandbox execution and certification remain outstanding.
 
 Do not populate the GavaConnect catalog service mapping with direct OSCU paths. The two systems have separate base URLs, authentication contexts and operational lifecycles. Never forward a GavaConnect bearer token to the direct OSCU host.
 
