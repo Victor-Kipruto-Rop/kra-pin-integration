@@ -21,8 +21,8 @@ paths:
       description: >
         Sends the supplied JSON payload to the configured upstream mapping.
         All requests require explicit taxpayer consent. Mutating services
-        require Idempotency-Key. Authorization returns an access token and
-        must never be exposed to browser/mobile clients.
+        require Idempotency-Key. Authorization obtains and caches the KRA token
+        server-side; the proxy returns only status metadata and never exposes it.
       security:
         - ApiKey: []
       parameters:
