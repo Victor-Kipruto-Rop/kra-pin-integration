@@ -1,6 +1,7 @@
 """Runtime configuration, read from environment variables."""
 from __future__ import annotations
 
+import math
 import os
 from dataclasses import dataclass
 from urllib.parse import urlparse
@@ -109,7 +110,7 @@ def validate_settings(s: Settings) -> None:
         )
     if s.allow_unauthenticated and s.environment == "production":
         problems.append("ALLOW_UNAUTHENTICATED cannot be enabled in production")
-    if s.timeout_seconds <= 0:
+    if not math.isfinite(s.timeout_seconds) or s.timeout_seconds <= 0:
         problems.append("KRA_TIMEOUT_SECONDS must be greater than zero")
     if s.rate_limit_per_minute < 1:
         problems.append("RATE_LIMIT_PER_MINUTE must be at least 1")
