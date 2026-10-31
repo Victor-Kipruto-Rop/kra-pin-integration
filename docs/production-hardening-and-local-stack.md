@@ -5,7 +5,8 @@
 The API now uses a common store interface for mutation idempotency and rate limiting:
 
 - Local tests and a developer setup without Redis use a single-process memory store. It is not safe for multiple workers or production.
-- When `IDEMPOTENCY_REDIS_URL` is configured, Redis coordinates rate limits and idempotency reservations across workers/replicas.
+- When `IDEMPOTENCY_REDIS_URL` is configured, Redis coordinates rate limits and idempotency reservations across workers/replicas. Rate limits use a Redis atomic sliding window; API-key identities are SHA-256 digests, and OSCU idempotency namespaces include the tenant TIN/branch context to prevent cross-tenant response replay.
+- Payload fingerprints are keyed HMAC-SHA-256 values using the encryption key, not plain hashes, to reduce offline guessing of low-entropy taxpayer request fields.
 - Production startup requires `IDEMPOTENCY_REDIS_URL`, a TLS `rediss://` URL, and a valid `IDEMPOTENCY_ENCRYPTION_KEY`.
 - Completed idempotency responses are encrypted with Fernet before being stored in Redis. The key must be kept in a secret manager and backed up securely; losing it makes completed cached responses unreadable. Undecryptable/corrupt records fail closed as unknown outcomes.
 - Default idempotency retention is seven days. Configure `IDEMPOTENCY_TTL_SECONDS` to at least 3600 seconds. After expiry, a repeated key can no longer be recognized; choose a retention period aligned with KRA's replay and business-reconciliation requirements.
