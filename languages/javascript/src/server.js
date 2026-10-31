@@ -22,7 +22,8 @@ async function invokeService(req,res,id,k){
  const idem=req.headers['idempotency-key'];
  if(services[id]&&(!idem||idem.length<16||idem.length>128))return send(res,400,{detail:'Idempotency-Key (16-128 chars) is required for this operation'});
  const idemKey=idem?createHash('sha256').update(k+':'+id+':'+idem).digest('hex'):null;
- if(idemKey&&idempotency.has(idemKey))return send(res,200,idempotency.get(idemKey));
+ const fingerprint=createHash('sha256').update(JSON.stringify(body.payload)).digest('hex');
+ if(idemKey&&idempotency.has(idemKey)){const prior=idempotency.get(idemKey);if(prior.fingerprint!==fingerprint)return send(res,409,{error:{code:'idempotency_conflict',message:'Idempotency-Key was already used with a different payload'}});return send(res,200,prior.data);}
  if(mock)return send(res,501,{error:{code:'mock_service_not_implemented',message:'This service has no fabricated mock response; configure a verified KRA sandbox mapping'}});
  const ck=process.env.KRA_PIN_CONSUMER_KEY,cs=process.env.KRA_PIN_CONSUMER_SECRET;
  if(id==='authorization'){try{return send(res,200,{access_token:await token(ck,cs),token_type:'Bearer'});}catch{return send(res,502,{error:{code:'authorization_failed',message:'KRA authorization failed'}});}}
@@ -34,7 +35,7 @@ async function invokeService(req,res,id,k){
   if(response.status===401){cache.delete(ck);tok=await token(ck,cs);response=await fetch(upstreamBase+path,{method,headers:{authorization:'Bearer '+tok,'content-type':'application/json'},...(method==='POST'?{body:JSON.stringify(body.payload)}:{}),signal:AbortSignal.timeout(20000)});}
   const raw=await response.text();let data;try{data=raw?JSON.parse(raw):{};}catch{return send(res,502,{error:{code:'invalid_upstream_response',message:'KRA returned non-JSON content'}});}
   if(!response.ok)return send(res,response.status===429?429:502,{error:{code:'kra_upstream_error',message:'KRA service request failed',upstream_status:response.status}});
-  if(idemKey)idempotency.set(idemKey,data);return send(res,200,data);
+  if(idemKey)idempotency.set(idemKey,{fingerprint,data});return send(res,200,data);
  }catch{return send(res,502,{error:{code:'upstream_error',message:'KRA service request failed'}});}
 }
 
