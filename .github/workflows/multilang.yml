@@ -19,7 +19,7 @@ jobs:
         with: {python-version: '3.12'}
       - run: python scripts/validate-catalog.py
       - run: python scripts/validate-oscu-contract.py
-      - run: python -m py_compile scripts/validate-catalog.py scripts/validate-oscu-contract.py scripts/validate-production-config.py scripts/summarize-junit.py scripts/run-oscu-sandbox-check.py server/app/dotenv_loader.py
+      - run: python -m py_compile scripts/validate-catalog.py scripts/validate-oscu-contract.py scripts/validate-production-config.py scripts/summarize-junit.py scripts/run-oscu-sandbox-check.py server/app/dotenv_loader.py server/app/idempotency.py
   python:
     runs-on: ubuntu-latest
     steps:
