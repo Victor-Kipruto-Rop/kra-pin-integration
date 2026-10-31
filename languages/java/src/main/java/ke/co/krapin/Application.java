@@ -16,7 +16,7 @@ public class Application {
   if(!SERVICES.containsKey(service))return ResponseEntity.status(404).body(Map.of("detail","Unknown KRA service"));if(!Boolean.TRUE.equals(body.get("consent")))return ResponseEntity.badRequest().body(Map.of("detail","consent must be true"));
   if(!(body.get("payload") instanceof Map))return ResponseEntity.unprocessableEntity().body(Map.of("detail","payload must be a JSON object"));
   if(SERVICES.get(service)&&(idem==null||idem.length()<16||idem.length()>128))return ResponseEntity.badRequest().body(Map.of("detail","Idempotency-Key (16-128 chars) is required"));
-  String ik=idem==null?null:Integer.toHexString(Objects.hash(key,service,idem));if(ik!=null&&idempotency.containsKey(ik))return ResponseEntity.ok(idempotency.get(ik));
+  String ik=idem==null?null:idemDigest(key+":"+service+":"+idem);if(ik!=null&&idempotency.containsKey(ik))return ResponseEntity.ok(idempotency.get(ik));
   if(mock)return ResponseEntity.status(501).body(Map.of("error",Map.of("code","mock_service_not_implemented","message","Configure verified KRA sandbox mappings; no filing or payment mock is fabricated")));
   String ck=System.getenv().getOrDefault("KRA_PIN_CONSUMER_KEY",""),cs=System.getenv().getOrDefault("KRA_PIN_CONSUMER_SECRET","");
   if(service.equals("authorization")){try{return ResponseEntity.ok(Map.of("access_token",token(ck,cs),"token_type","Bearer"));}catch(Exception e){return ResponseEntity.status(502).body(err("authorization_failed","KRA authorization failed"));}}
@@ -45,7 +45,7 @@ public class Application {
    if(pin==null&&name==null)return ResponseEntity.status(502).body(err("unexpected_response","Unexpected KRA response"));return ResponseEntity.ok(new Result(true,pin,name,env,false,null));
   }catch(Exception e){return ResponseEntity.status(502).body(err("upstream_error","KRA request failed; details withheld"));}
  }
- Map<String,Object> err(String c,String m){return Map.of("error",Map.of("code",c,"message",m));}
+ String idemDigest(String value){try{return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8)));}catch(Exception e){throw new IllegalStateException(e);}}\n Map<String,Object> err(String c,String m){return Map.of("error",Map.of("code",c,"message",m));}
  String token(String k,String s){Token t=cache.get(k);if(t!=null&&t.expires().isAfter(Instant.now().plusSeconds(60)))return t.value();Map d=http.get().uri(base+"/v1/token/generate?grant_type=client_credentials").headers(h->h.setBasicAuth(k,s)).retrieve().body(Map.class);String v=Objects.toString(d.get("access_token"),"");if(v.isBlank())throw new IllegalStateException("Missing token");cache.put(k,new Token(v,Instant.now().plusSeconds(Long.parseLong(Objects.toString(d.get("expires_in"),"3600")))));return v;}
  boolean authorized(String k){if(k==null)return false;return Arrays.stream(System.getenv().getOrDefault("PROXY_API_KEYS","").split(",")).map(String::trim).filter(x->!x.isEmpty()).anyMatch(x->java.security.MessageDigest.isEqual(x.getBytes(),k.getBytes()));}
  synchronized boolean rate(String k){var q=hits.computeIfAbsent(k,x->new ArrayDeque<>());Instant cut=Instant.now().minusSeconds(60);while(!q.isEmpty()&&q.peek().isBefore(cut))q.poll();if(q.size()>=30)return false;q.add(Instant.now());return true;}
