@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import logging
 from contextlib import asynccontextmanager
@@ -115,6 +116,11 @@ def create_app(settings: Settings | None = None, client=None, oscu_client=None, 
             raise HTTPException(status_code=503, detail="KRA response received but idempotency result could not be persisted; reconcile before retrying") from exc
         return response
 
+    def payload_fingerprint(payload: dict) -> str:
+        canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+        secret = settings.idempotency_encryption_key.encode("ascii") if settings.idempotency_encryption_key else b"kra-pin-local-development-only"
+        return hmac.new(secret, canonical, hashlib.sha256).hexdigest()
+
     def require_consent(consent: bool) -> None:
         if settings.require_consent and not consent:
             raise HTTPException(
@@ -195,9 +201,7 @@ def create_app(settings: Settings | None = None, client=None, oscu_client=None, 
         cache_key = hashlib.sha256(
             f"{identity}:{service_id}:{idempotency_key}".encode()
         ).hexdigest() if idempotency_key else None
-        fingerprint = hashlib.sha256(
-            json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
-        ).hexdigest()
+        fingerprint = payload_fingerprint(payload)
         if settings.mock:
             raise HTTPException(
                 status_code=501,
@@ -233,9 +237,13 @@ def create_app(settings: Settings | None = None, client=None, oscu_client=None, 
             raise HTTPException(status_code=404, detail="Unknown direct OSCU operation")
         if operation.get("mutates") and (not idempotency_key or not 16 <= len(idempotency_key) <= 128):
             raise HTTPException(status_code=400, detail="Idempotency-Key (16-128 chars) is required")
-        cache_key = hashlib.sha256(f"oscu:{identity}:{operation_id}:{idempotency_key}".encode()).hexdigest() if idempotency_key else None
-        fingerprint = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
         tenant_headers = {"tin": x_etims_tin or "", "bhfId": x_etims_bhf_id or "", "cmcKey": x_etims_cmc_key or ""}
+        cache_material = json.dumps(
+            {"identity": identity, "operation": operation_id, "idempotency_key": idempotency_key, "tenant": tenant_headers},
+            sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+        )
+        cache_key = hashlib.sha256(cache_material.encode()).hexdigest() if idempotency_key else None
+        fingerprint = payload_fingerprint(payload)
         if cache_key:
             return await execute_idempotently(
                 cache_key, fingerprint,
