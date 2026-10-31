@@ -30,7 +30,7 @@ The following is an honest implementation inventory, not a claim that all runtim
 - All seven implementations expose POST /v1/kra/{service-id} for the canonical 22-service catalog.
 - All require consent; mutating services require Idempotency-Key.
 - Upstream paths/methods are explicitly configured; missing mappings return 501 instead of guessed KRA calls.
-- eTIMS OSCU uses a separate configurable KRA HTTPS base URL.
+- The eTIMS automated-testing catalog service uses its official GavaConnect mapping; direct OSCU device protocol is explicitly out of scope for this generic catalog dispatcher.
 - Mock mode does not fabricate successful filing, PRN, TCC application or eTIMS responses.
 
 ## Additional hardening applied in this branch
