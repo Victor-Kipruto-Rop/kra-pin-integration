@@ -6,6 +6,7 @@ export const services={
 const servicePaths=JSON.parse(process.env.KRA_SERVICE_PATHS_JSON||'{}'),serviceMethods=JSON.parse(process.env.KRA_SERVICE_METHODS_JSON||'{}');
 const etimsBase=process.env.KRA_ETIMS_BASE_URL||'';
 
+function stableJson(value){if(Array.isArray(value))return '['+value.map(stableJson).join(',')+']';if(value&&typeof value==='object')return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+stableJson(value[k])).join(',')+'}';return JSON.stringify(value);}
 const send=(r,s,d)=>{r.writeHead(s,{'content-type':'application/json'});r.end(JSON.stringify(d));};
 const auth=k=>!!k&&keys.some(v=>Buffer.byteLength(v)===Buffer.byteLength(k)&&timingSafeEqual(Buffer.from(v),Buffer.from(k)));
 function rate(k){let q=(hits.get(k)||[]).filter(t=>Date.now()-t<60000);if(q.length>=30)return false;q.push(Date.now());hits.set(k,q);return true;}
@@ -22,7 +23,7 @@ async function invokeService(req,res,id,k){
  const idem=req.headers['idempotency-key'];
  if(services[id]&&(!idem||idem.length<16||idem.length>128))return send(res,400,{detail:'Idempotency-Key (16-128 chars) is required for this operation'});
  const idemKey=idem?createHash('sha256').update(k+':'+id+':'+idem).digest('hex'):null;
- const fingerprint=createHash('sha256').update(JSON.stringify(body.payload)).digest('hex');
+ const fingerprint=createHash('sha256').update(stableJson(body.payload)).digest('hex');
  if(idemKey&&idempotency.has(idemKey)){const prior=idempotency.get(idemKey);if(prior.fingerprint!==fingerprint)return send(res,409,{error:{code:'idempotency_conflict',message:'Idempotency-Key was already used with a different payload'}});return send(res,200,prior.data);}
  if(mock)return send(res,501,{error:{code:'mock_service_not_implemented',message:'This service has no fabricated mock response; configure a verified KRA sandbox mapping'}});
  const ck=process.env.KRA_PIN_CONSUMER_KEY,cs=process.env.KRA_PIN_CONSUMER_SECRET;
