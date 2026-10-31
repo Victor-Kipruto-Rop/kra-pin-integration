@@ -90,3 +90,30 @@ def test_memory_rate_limit_is_shared_with_idempotency_store():
         await store.aclose()
 
     asyncio.run(scenario())
+
+def test_redis_rate_limit_uses_atomic_server_clock_window():
+    from app.idempotency import RedisIdempotencyStore
+
+    class FakeRedis:
+        def __init__(self):
+            self.now = 120_000
+            self.hits = {}
+        async def eval(self, script, key_count, key, window_ms, limit, member):
+            assert "redis.call('TIME')" in script
+            recent = [stamp for stamp, _ in self.hits.get(key, []) if self.now - stamp < int(window_ms)]
+            if len(recent) >= int(limit):
+                self.hits[key] = [(stamp, item) for stamp, item in self.hits[key] if self.now - stamp < int(window_ms)]
+                return 0
+            recent.append(self.now)
+            self.hits[key] = [(stamp, item) for stamp, item in self.hits.get(key, []) if self.now - stamp < int(window_ms)] + [(self.now, member)]
+            return 1
+
+    async def scenario():
+        store = RedisIdempotencyStore.__new__(RedisIdempotencyStore)
+        store._redis = FakeRedis()
+        assert await store.allow_rate_limit("client", 2) is True
+        assert await store.allow_rate_limit("client", 2) is True
+        assert await store.allow_rate_limit("client", 2) is False
+        assert await store.allow_rate_limit("other", 2) is True
+
+    asyncio.run(scenario())
