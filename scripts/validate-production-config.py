@@ -39,10 +39,13 @@ def validate(env: dict[str, str]) -> list[str]:
     missing_paths = sorted(service_id for service_id in REQUIRED_UPSTREAM if not isinstance(paths.get(service_id), str) or not paths[service_id].startswith("/") or paths[service_id].startswith("//"))
     if missing_paths:
         errors.append("Missing or unsafe KRA_SERVICE_PATHS_JSON entries: " + ", ".join(missing_paths))
-    missing_methods = sorted(service_id for service_id in REQUIRED_UPSTREAM if not isinstance(methods.get(service_id, "POST"), str) or methods.get(service_id, "POST").upper() not in {"GET", "POST"})
+    missing_methods = sorted(service_id for service_id in REQUIRED_UPSTREAM if service_id not in methods or not isinstance(methods.get(service_id), str) or methods[service_id].upper() not in {"GET", "POST"})
     if missing_methods:
-        errors.append("Unsupported methods for: " + ", ".join(missing_methods))
-    unsafe_get = sorted(service_id for service_id in MUTATING if isinstance(methods.get(service_id, "POST"), str) and methods.get(service_id, "POST").upper() == "GET")
+        errors.append("Missing or unsupported explicit KRA_SERVICE_METHODS_JSON entries for: " + ", ".join(missing_methods))
+    unknown_ids = sorted((set(paths) | set(methods)) - REQUIRED_UPSTREAM)
+    if unknown_ids:
+        errors.append("Unknown mapping service IDs: " + ", ".join(unknown_ids))
+    unsafe_get = sorted(service_id for service_id in MUTATING if isinstance(methods.get(service_id), str) and methods[service_id].upper() == "GET")
     if unsafe_get:
         errors.append("Mutating services cannot use GET: " + ", ".join(unsafe_get))
 
