@@ -153,3 +153,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md). MIT licen
 ## CI options
 
 The repository includes GitHub Actions and a `.gitlab-ci.yml` pipeline. If GitHub Actions runner availability or billing prevents jobs from starting, import or mirror this repository into GitLab and use the included pipeline to run catalog validation and all seven language test suites. The GitLab pipeline has not been executed from this ChatGPT session; it must be run in your GitLab project before treating CI as passed.
+
+
+### Configured sandbox service: VAT Exemption Checker
+
+The supplied KRA Postman collection documents `POST /dtd/checker/v1/vatexemption` with bearer authentication and the exact JSON property `VatExemptionCertificateNo`. It is now configured in the service mapping template and has a request schema at [contracts/schemas/vat-exemption-checker.request.schema.json](contracts/schemas/vat-exemption-checker.request.schema.json). Invoke the proxy using `POST /v1/kra/vat-exemption-checker` with `{"consent":true,"payload":{"VatExemptionCertificateNo":"YOUR_SANDBOX_CERTIFICATE_NUMBER"}}`. The shared OAuth client obtains the token server-side. No response example was supplied; a successful sandbox call and response/error schema remain unverified.
