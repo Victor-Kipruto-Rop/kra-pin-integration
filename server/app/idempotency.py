@@ -134,19 +134,21 @@ class RedisIdempotencyStore:
             return "unknown", None
 
     async def allow_rate_limit(self, identity: str, limit: int, window_seconds: int = 60) -> bool:
-        now_ms = time.time_ns() // 1_000_000
         window_ms = window_seconds * 1000
-        member = f"{now_ms}:{uuid.uuid4().hex}"
+        member = uuid.uuid4().hex
         script = """
-        redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', ARGV[1] - ARGV[2])
+        local redis_time = redis.call('TIME')
+        local now_ms = (tonumber(redis_time[1]) * 1000) + math.floor(tonumber(redis_time[2]) / 1000)
+        local window_ms = tonumber(ARGV[1])
+        redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', now_ms - window_ms)
         local count = redis.call('ZCARD', KEYS[1])
-        if count >= tonumber(ARGV[3]) then return 0 end
-        redis.call('ZADD', KEYS[1], ARGV[1], ARGV[4])
-        redis.call('PEXPIRE', KEYS[1], ARGV[2])
+        if count >= tonumber(ARGV[2]) then return 0 end
+        redis.call('ZADD', KEYS[1], now_ms, ARGV[3])
+        redis.call('PEXPIRE', KEYS[1], window_ms)
         return 1
         """
         result = await self._redis.eval(
-            script, 1, f"kra:ratelimit:{identity}", now_ms, window_ms, limit, member
+            script, 1, f"kra:ratelimit:{identity}", window_ms, limit, member
         )
         return bool(result)
 
