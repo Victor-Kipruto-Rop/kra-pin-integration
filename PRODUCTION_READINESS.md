@@ -28,6 +28,7 @@ A release may be marked production-ready only when every gate below has recorded
 - A green local test is not KRA certification or production approval.
 - The KRA endpoint hosts, response fields, not-found codes and authentication behavior must be confirmed against the current official developer documentation and sandbox.
 - In-memory caches and rate limiters do not coordinate across replicas.
+- The PHP CLI Dockerfile uses PHP's built-in development server; production requires PHP-FPM behind a hardened web server or ingress.
 - A local PHP temporary-file rate limiter is not a distributed production rate limiter.
 - A PIN lookup result is not identity proof, tax compliance proof or a Tax Compliance Certificate.
 
@@ -45,6 +46,6 @@ For each release, attach the commit SHA and evidence for:
 
 ## Safe deployment posture
 
-Run one language implementation per deployment. Set `KRA_ENVIRONMENT=production`, `KRA_MOCK=false`, use separately approved production credentials, terminate TLS at a trusted ingress, and store `PROXY_API_KEYS` in a secret manager. Do not expose consumer credentials to clients. Do not deploy this template unchanged as a multi-replica service until shared rate limiting and token coordination are configured.
+Run one language implementation per deployment. Use the included PHP container only for local development; build a PHP-FPM production image and web-server/ingress configuration before deploying PHP. Set `KRA_ENVIRONMENT=production`, `KRA_MOCK=false`, use separately approved production credentials, terminate TLS at a trusted ingress, and store `PROXY_API_KEYS` in a secret manager. Do not expose consumer credentials to clients. Do not deploy this template unchanged as a multi-replica service until shared rate limiting and token coordination are configured.
 
 **Do not change this assessment to “Production Ready” until all gates are evidenced for the release commit.**
