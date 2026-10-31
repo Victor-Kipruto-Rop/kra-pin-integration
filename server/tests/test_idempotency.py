@@ -11,6 +11,18 @@ def test_memory_store_reserves_replays_and_detects_payload_conflicts():
         assert await store.reserve("key", "different") == ("conflict", None)
         await store.complete("key", "fingerprint", {"accepted": True})
         assert await store.reserve("key", "fingerprint") == ("complete", {"accepted": True})
+        try:
+            await store.complete("key", "fingerprint", {"accepted": False})
+        except RuntimeError:
+            pass
+        else:
+            raise AssertionError("completed reservation must not be overwritten")
+        try:
+            await store.mark_unknown("key", "fingerprint")
+        except RuntimeError:
+            pass
+        else:
+            raise AssertionError("completed reservation must not become unknown")
         await store.aclose()
 
     asyncio.run(scenario())
@@ -47,15 +59,21 @@ def test_redis_store_encrypts_cached_response_and_replays_safely():
             return True
         async def get(self, key):
             return self.values.get(key)
-        async def eval(self, script, count, key, fingerprint):
+        async def eval(self, script, count, key, *args):
             raw = self.values.get(key)
             if raw is None:
                 return 0
             record = json.loads(raw)
-            if record.get("fingerprint") == fingerprint and record.get("status") == "pending":
-                del self.values[key]
-                return 1
-            return 0
+            fingerprint = args[0]
+            if "redis.call('DEL'" in script:
+                if record.get("fingerprint") == fingerprint and record.get("status") == "pending":
+                    del self.values[key]
+                    return 1
+                return 0
+            if record.get("fingerprint") != fingerprint or record.get("status") != "pending":
+                return 0
+            self.values[key] = args[1]
+            return 1
         async def ping(self):
             return True
         async def aclose(self):
@@ -75,6 +93,19 @@ def test_redis_store_encrypts_cached_response_and_replays_safely():
         assert "A123456789Z" not in raw
         assert await store.reserve("redis-key", "fp") == ("complete", response)
         assert await store.reserve("redis-key", "other") == ("conflict", None)
+        try:
+            await store.complete("redis-key", "fp", {"tampered": True})
+        except RuntimeError:
+            pass
+        else:
+            raise AssertionError("Redis completion must require a pending reservation")
+        try:
+            await store.mark_unknown("redis-key", "fp")
+        except RuntimeError:
+            pass
+        else:
+            raise AssertionError("Redis unknown transition must require a pending reservation")
+        assert await store.reserve("redis-key", "fp") == ("complete", response)
         await store.aclose()
 
     asyncio.run(scenario())
