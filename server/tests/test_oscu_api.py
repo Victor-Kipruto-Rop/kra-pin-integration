@@ -120,3 +120,47 @@ def test_oscu_idempotency_is_scoped_to_tenant_context():
     assert first.json()["call"] == replay.json()["call"] == 1
     assert other_tenant.json()["call"] == 2
     assert fake.calls == 2
+
+def test_idempotency_store_failure_prevents_upstream_submission():
+    class BrokenStore:
+        async def ping(self): return None
+        async def aclose(self): return None
+        async def allow_rate_limit(self, identity, limit, window_seconds=60): return True
+        async def reserve(self, key, fingerprint): raise ConnectionError("redis unavailable")
+        async def complete(self, key, fingerprint, response): raise AssertionError("must not complete")
+        async def mark_unknown(self, key, fingerprint): return None
+        async def release(self, key, fingerprint): return None
+
+    fake = FakeOscu()
+    app = create_app(Settings(mock=True, proxy_api_keys=("test-key",)), oscu_client=fake, idempotency_store=BrokenStore())
+    headers = {**KEY, "X-ETIMS-TIN": "A123456789Z", "X-ETIMS-BHF-ID": "00", "X-ETIMS-CMC-KEY": "ctx", "Idempotency-Key": "redis-unavailable-key-001"}
+    with TestClient(app) as client:
+        response = client.post("/v1/etims/oscu/save-item", json={"consent": True, "payload": {}}, headers=headers)
+    assert response.status_code == 503
+
+
+def test_failed_idempotency_persistence_blocks_replay_after_upstream_success():
+    class CompletionFailStore:
+        def __init__(self):
+            self.state = "new"
+        async def ping(self): return None
+        async def aclose(self): return None
+        async def allow_rate_limit(self, identity, limit, window_seconds=60): return True
+        async def reserve(self, key, fingerprint):
+            if self.state == "new":
+                self.state = "pending"
+                return "new", None
+            return "pending", None
+        async def complete(self, key, fingerprint, response): raise ConnectionError("redis write failed")
+        async def mark_unknown(self, key, fingerprint): self.state = "unknown"
+        async def release(self, key, fingerprint): self.state = "new"
+
+    fake = FakeOscu()
+    store = CompletionFailStore()
+    app = create_app(Settings(mock=True, proxy_api_keys=("test-key",)), oscu_client=fake, idempotency_store=store)
+    headers = {**KEY, "X-ETIMS-TIN": "A123456789Z", "X-ETIMS-BHF-ID": "00", "X-ETIMS-CMC-KEY": "ctx", "Idempotency-Key": "redis-complete-failure-001"}
+    with TestClient(app) as client:
+        first = client.post("/v1/etims/oscu/save-item", json={"consent": True, "payload": {}}, headers=headers)
+        replay = client.post("/v1/etims/oscu/save-item", json={"consent": True, "payload": {}}, headers=headers)
+    assert first.status_code == 503
+    assert replay.status_code == 409
