@@ -12,6 +12,8 @@ constants below if needed.
 from __future__ import annotations
 
 import asyncio
+import json
+import os
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -143,6 +145,46 @@ class KraClient:
         if not isinstance(data, dict):
             raise KraError(502, "unexpected_response", "KRA returned an unexpected JSON shape")
         return resp.status_code, data
+
+
+    async def invoke_catalog_service(self, service_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """Invoke a configured catalog operation without guessing KRA endpoint contracts."""
+        paths = json.loads(os.environ.get("KRA_SERVICE_PATHS_JSON", "{}"))
+        methods = json.loads(os.environ.get("KRA_SERVICE_METHODS_JSON", "{}"))
+        if service_id == "authorization":
+            return {"access_token": await self._token(self._s.pin_key, self._s.pin_secret), "token_type": "Bearer"}
+        path = paths.get(service_id)
+        if not isinstance(path, str) or not path.startswith("/") or path.startswith("//"):
+            raise KraError(501, "service_not_configured", "No verified KRA endpoint mapping configured")
+        method = str(methods.get(service_id, "POST")).upper()
+        if method not in {"GET", "POST"}:
+            raise KraError(500, "invalid_service_configuration", "Only GET and POST mappings are supported")
+        credentials = (self._s.pin_key, self._s.pin_secret)
+        async def send(token: str) -> httpx.Response:
+            return await self._http.request(method, path, json=payload if method == "POST" else None,
+                headers={"Authorization": f"Bearer {token}"})
+        token = await self._token(*credentials)
+        try:
+            response = await send(token)
+            if response.status_code == 401:
+                self._tokens.pop(credentials[0], None)
+                token = await self._token(*credentials)
+                response = await send(token)
+        except httpx.TimeoutException as exc:
+            raise KraError(504, "upstream_timeout", "KRA service timed out") from exc
+        except httpx.HTTPError as exc:
+            raise KraError(502, "upstream_unreachable", "Could not reach KRA") from exc
+        if response.status_code == 429:
+            raise KraError(503, "upstream_rate_limited", "KRA rate limit reached; retry later")
+        if response.status_code >= 400:
+            raise KraError(502, "kra_upstream_error", "KRA service request failed")
+        try:
+            data = response.json()
+        except ValueError as exc:
+            raise KraError(502, "unexpected_response", "KRA returned non-JSON content") from exc
+        if not isinstance(data, dict):
+            raise KraError(502, "unexpected_response", "KRA returned an unexpected JSON shape")
+        return data
 
     async def check_pin(self, pin: str) -> PinResult:
         status, data = await self._post(
