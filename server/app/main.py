@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 from . import __version__
 from .config import Settings, load_settings, validate_settings
 from .kra_client import KraClient, KraError, MockKraClient, PinResult
+from .idempotency import MemoryIdempotencyStore, RedisIdempotencyStore
 from .oscu_client import DirectOscuClient
 from .ratelimit import RateLimiter
 from .schemas import PinByIdRequest, PinVerifyRequest, VerifyResponse, normalize_pin
@@ -21,22 +22,23 @@ from .security import api_key_matches, mask_pin
 log = logging.getLogger("kra_pin")
 
 
-def create_app(settings: Settings | None = None, client=None, oscu_client=None) -> FastAPI:
+def create_app(settings: Settings | None = None, client=None, oscu_client=None, idempotency_store=None) -> FastAPI:
     settings = settings or load_settings()
     validate_settings(settings)
     limiter = RateLimiter(settings.rate_limit_per_minute)
-    idempotency_cache: dict[str, tuple[str, dict | None]] = {}
-    idempotency_lock = asyncio.Lock()
+    store = idempotency_store or (RedisIdempotencyStore(settings.idempotency_redis_url, settings.idempotency_ttl_seconds) if settings.idempotency_redis_url else MemoryIdempotencyStore())
     service_mutates = {"authorization": False, "pin-checker-by-pin": False, "pin-checker-by-id": False, "fetch-taxpayer-obligations": False, "know-kra-tax-service-office": False, "tax-compliance-certificate-application": True, "tax-compliance-certificate-checker": False, "vat-exemption-checker": False, "it-exemption-checker": False, "nil-return-filing": True, "tot-return-filing": True, "income-tax-withholding-prn-generation": True, "vat-withholding-prn-generation": True, "rental-withholding-prn-generation": True, "excise-license-checker-by-pin": False, "excise-license-checker-by-certificate-number": False, "customs-declaration-status-checker": False, "customs-tax-calculator": False, "import-certificate-checker-by-pin": False, "import-certificate-checker-by-cert-number": False, "invoice-checker": False, "etims-oscu-integrator-automated-testing": True}
     kra = client or (MockKraClient() if settings.mock else KraClient(settings))
     oscu = oscu_client or (DirectOscuClient(settings) if settings.etims_oscu_enabled else None)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
+        await store.ping()
         yield
         await kra.aclose()
         if oscu is not None:
             await oscu.aclose()
+        await store.aclose()
 
     app = FastAPI(
         title="KRA PIN Integration Template",
@@ -65,6 +67,51 @@ def create_app(settings: Settings | None = None, client=None, oscu_client=None) 
                 status_code=429, detail="Rate limit exceeded", headers={"Retry-After": "60"}
             )
         return identity
+
+    async def execute_idempotently(
+        cache_key: str,
+        fingerprint: str,
+        operation,
+        unknown_codes: set[str] | None = None,
+    ) -> dict:
+        try:
+            state, cached_response = await store.reserve(cache_key, fingerprint)
+        except Exception as exc:
+            log.error("idempotency_store_unavailable operation=reserve")
+            raise HTTPException(status_code=503, detail="Idempotency storage is unavailable; request was not submitted") from exc
+        if state == "conflict":
+            raise HTTPException(status_code=409, detail="Idempotency-Key was already used with a different payload")
+        if state == "complete":
+            return cached_response
+        if state == "unknown":
+            raise HTTPException(status_code=409, detail="Previous request outcome is unknown; reconcile with KRA before retrying")
+        if state == "pending":
+            raise HTTPException(status_code=409, detail="A request with this Idempotency-Key is already in progress")
+        try:
+            response = await operation()
+        except KraError as exc:
+            try:
+                if exc.code in (unknown_codes or set()):
+                    await store.mark_unknown(cache_key, fingerprint)
+                else:
+                    await store.release(cache_key, fingerprint)
+            except Exception:
+                log.error("idempotency_store_unavailable operation=record_failure")
+            raise
+        except Exception:
+            try:
+                await store.release(cache_key, fingerprint)
+            except Exception:
+                log.error("idempotency_store_unavailable operation=release")
+            raise
+        try:
+            await store.complete(cache_key, fingerprint, response)
+        except Exception as exc:
+            # The upstream may have committed the mutation. Leave the durable
+            # pending reservation in place so a retry cannot submit it again.
+            log.error("idempotency_store_unavailable operation=complete")
+            raise HTTPException(status_code=503, detail="KRA response received but idempotency result could not be persisted; reconcile before retrying") from exc
+        return response
 
     def require_consent(consent: bool) -> None:
         if settings.require_consent and not consent:
@@ -147,17 +194,11 @@ def create_app(settings: Settings | None = None, client=None, oscu_client=None) 
                 detail="No fabricated filing/payment mock exists; configure a verified KRA sandbox mapping",
             )
         if cache_key:
-            # Serializes same-process duplicate submissions. Production must use a shared
-            # durable store (Redis/database) to coordinate multiple workers/replicas.
-            async with idempotency_lock:
-                prior = idempotency_cache.get(cache_key)
-                if prior:
-                    if prior[0] != fingerprint:
-                        raise HTTPException(status_code=409, detail="Idempotency-Key was already used with a different payload")
-                    return prior[1]
-                result = await kra.invoke_catalog_service(service_id, payload)
-                idempotency_cache[cache_key] = (fingerprint, result)
-                return result
+            return await execute_idempotently(
+                cache_key, fingerprint,
+                lambda: kra.invoke_catalog_service(service_id, payload),
+                {"upstream_timeout"},
+            )
         return await kra.invoke_catalog_service(service_id, payload)
 
     @app.post("/v1/etims/oscu/{operation_id}", tags=["etims-oscu"])
@@ -186,22 +227,11 @@ def create_app(settings: Settings | None = None, client=None, oscu_client=None) 
         fingerprint = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
         tenant_headers = {"tin": x_etims_tin or "", "bhfId": x_etims_bhf_id or "", "cmcKey": x_etims_cmc_key or ""}
         if cache_key:
-            async with idempotency_lock:
-                prior = idempotency_cache.get(cache_key)
-                if prior:
-                    if prior[0] != fingerprint:
-                        raise HTTPException(status_code=409, detail="Idempotency-Key was reused with a different payload")
-                    if prior[1] is None:
-                        raise HTTPException(status_code=409, detail="Previous OSCU request outcome is unknown; reconcile with KRA before retrying")
-                    return prior[1]
-                try:
-                    result = await oscu.invoke(operation_id, payload, tenant_headers)
-                except KraError as exc:
-                    if exc.code == "oscu_outcome_unknown":
-                        idempotency_cache[cache_key] = (fingerprint, None)
-                    raise
-                idempotency_cache[cache_key] = (fingerprint, result)
-                return result
+            return await execute_idempotently(
+                cache_key, fingerprint,
+                lambda: oscu.invoke(operation_id, payload, tenant_headers),
+                {"oscu_outcome_unknown"},
+            )
         return await oscu.invoke(operation_id, payload, tenant_headers)
 
     return app
