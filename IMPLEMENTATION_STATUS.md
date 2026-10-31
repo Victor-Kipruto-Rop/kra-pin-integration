@@ -84,3 +84,5 @@ Do not merge as production-ready or deploy real taxpayer data until all release 
 - Definitive non-5xx HTTP rejections remain explicit request rejections; automatic retry is not performed by these SDK clients.
 - Added regression tests for the Python, Go, JavaScript, TypeScript, PHP and Ruby clients. Java's production code path has been hardened, but a transport-mocked regression test is still outstanding.
 - Full seven-runtime tests remain unexecuted; no language-level change in this section is considered verified until the local matrix or GitLab CI completes successfully.
+
+- Python GavaConnect and direct OSCU token-acquisition failures now use distinct error codes from operation-request failures. This avoids incorrectly marking an idempotency key unknown when authentication failed before the mutating request was submitted.
