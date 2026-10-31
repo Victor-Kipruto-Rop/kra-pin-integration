@@ -5,3 +5,7 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .DS_Store
+
+# Local taxpayer/device fixtures and redacted sandbox evidence
+private-fixtures/
+artifacts/oscu-evidence/
