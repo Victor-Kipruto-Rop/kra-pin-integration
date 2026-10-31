@@ -18,7 +18,7 @@ import (
 )
 
 type Config struct {
- Env, Base, Key, Secret, EtimsBase string
+ Env, Base, Key, Secret string
  Mock, Consent bool
  APIKeys []string
  Paths, Methods map[string]string
@@ -44,7 +44,7 @@ func loadConfig() Config {
  e:=env("KRA_ENVIRONMENT","sandbox")
  if e!="sandbox"&&e!="production" { log.Fatal("KRA_ENVIRONMENT must be sandbox or production") }
  base:="https://sbx.kra.go.ke"; if e=="production" { base="https://api.kra.go.ke" }
- c:=Config{Env:e,Base:base,EtimsBase:os.Getenv("KRA_ETIMS_BASE_URL"),Key:os.Getenv("KRA_PIN_CONSUMER_KEY"),Secret:os.Getenv("KRA_PIN_CONSUMER_SECRET"),Mock:env("KRA_MOCK","true")=="true",Consent:env("REQUIRE_CONSENT","true")!="false",APIKeys:strings.Split(os.Getenv("PROXY_API_KEYS"),",")}
+ c:=Config{Env:e,Base:base,Key:os.Getenv("KRA_PIN_CONSUMER_KEY"),Secret:os.Getenv("KRA_PIN_CONSUMER_SECRET"),Mock:env("KRA_MOCK","true")=="true",Consent:env("REQUIRE_CONSENT","true")!="false",APIKeys:strings.Split(os.Getenv("PROXY_API_KEYS"),",")}
  if c.Mock&&e=="production" { log.Fatal("mock mode forbidden in production") }
  if !c.Mock&&(c.Key==""||c.Secret=="") { log.Fatal("KRA credentials required when mock mode is disabled") }
  valid:=false;for _,k:=range c.APIKeys { if strings.TrimSpace(k)!="" { valid=true } };if !valid { log.Fatal("PROXY_API_KEYS required") }
