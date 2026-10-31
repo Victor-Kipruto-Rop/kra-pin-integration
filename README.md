@@ -158,3 +158,8 @@ The PIN-specific legacy routes still contain example response mappings; confirm 
 - [Feature parity](FEATURE_PARITY.md)
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md). MIT license.
+
+
+## Shared idempotency and local Docker stack
+
+Mutating KRA and direct OSCU operations now use a shared idempotency store abstraction. Local development and tests use an in-memory store unless Redis is configured. Production requires private TLS Redis (`IDEMPOTENCY_REDIS_URL=rediss://...`) and a valid Fernet `IDEMPOTENCY_ENCRYPTION_KEY`; cached KRA responses are encrypted before persistence. Redis also coordinates rate limiting across application replicas. See [production hardening and local stack](docs/production-hardening-and-local-stack.md) for configuration, retention, recovery and Docker Compose instructions. The local Compose stack binds the API to loopback and does not publish Redis.
