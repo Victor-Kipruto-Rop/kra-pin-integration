@@ -29,7 +29,7 @@ class DirectOscuClient:
         self._http = httpx.AsyncClient(base_url=TOKEN_HOST, timeout=settings.timeout_seconds, transport=transport)
         self._tokens: tuple[str, float] | None = None
         self._token_lock = asyncio.Lock()
-        manifest_path = Path(__file__).resolve().parents[2] / "contracts" / "etims-oscu-direct.endpoints.json"
+        manifest_path = Path(__file__).with_name("etims_oscu_endpoints.json")
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         self._operations = {item["id"]: item for item in manifest["operations"]}
 
