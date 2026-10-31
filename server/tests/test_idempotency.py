@@ -78,3 +78,15 @@ def test_redis_store_encrypts_cached_response_and_replays_safely():
         await store.aclose()
 
     asyncio.run(scenario())
+
+
+def test_memory_rate_limit_is_shared_with_idempotency_store():
+    async def scenario():
+        store = MemoryIdempotencyStore()
+        assert await store.allow_rate_limit("client", 2) is True
+        assert await store.allow_rate_limit("client", 2) is True
+        assert await store.allow_rate_limit("client", 2) is False
+        assert await store.allow_rate_limit("other-client", 2) is True
+        await store.aclose()
+
+    asyncio.run(scenario())
