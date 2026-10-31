@@ -28,14 +28,16 @@ jobs:
       - name: Validate KRA catalogs and OSCU contracts
         run: python ../scripts/validate-catalog.py && python ../scripts/validate-oscu-contract.py
       - name: Compile runner and configuration helpers
-        run: python -m py_compile ../scripts/run-oscu-sandbox-check.py app/dotenv_loader.py app/idempotency.py
+        run: python -m py_compile ../scripts/run-oscu-sandbox-check.py app/dotenv_loader.py app/idempotency.py ../languages/python/kra_pin_oscu.py
       - run: pip install -r requirements-dev.txt
+      - run: pip install -r ../languages/python/requirements.txt
       - run: ruff check .
       - run: mkdir -p reports && pytest -q --junitxml=reports/python-junit.xml
+      - run: PYTHONPATH=../languages/python pytest -q ../languages/python --junitxml=reports/python-oscu-sdk-junit.xml
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: python-junit-${{ matrix.python }}
-          path: server/reports/python-junit.xml
+          path: server/reports/*.xml
           if-no-files-found: ignore
           retention-days: 14
