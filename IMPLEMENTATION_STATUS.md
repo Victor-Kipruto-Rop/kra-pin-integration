@@ -8,7 +8,7 @@
 - Same-process idempotency replay with canonical payload fingerprints and HTTP 409 on key reuse with a different payload.
 - Authorization endpoint keeps the KRA bearer token server-side and returns status metadata only.
 - Complete 21-service upstream mapping template, per-service contract-readiness register and fail-closed production configuration preflight.
-- Separate configurable HTTPS KRA base URL for the eTIMS OSCU integration.
+- eTIMS OSCU automated-testing catalog entry registered and dispatched through the GavaConnect adapter; direct OSCU device-protocol integration remains a separate certified workstream.
 - Per-language tests asserting the 22-service catalog is present.
 - Multi-language CI workflow with manual dispatch and read-only repository permissions.
 - Dependabot coverage for Python, Go, Java, JavaScript, TypeScript, PHP, Ruby and GitHub Actions.
