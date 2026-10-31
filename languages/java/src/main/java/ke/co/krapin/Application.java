@@ -1,5 +1,5 @@
 package ke.co.krapin;
-import org.springframework.boot.*;import org.springframework.boot.autoconfigure.*;import org.springframework.web.bind.annotation.*;import org.springframework.web.client.RestClient;import org.springframework.http.*;import com.fasterxml.jackson.core.type.TypeReference;import com.fasterxml.jackson.databind.ObjectMapper;import org.springframework.http.client.JdkClientHttpRequestFactory;import java.net.http.HttpClient;import java.net.URI;import java.time.*;import java.util.*;import java.util.concurrent.*;
+import org.springframework.boot.*;import org.springframework.boot.autoconfigure.*;import org.springframework.web.bind.annotation.*;import org.springframework.web.client.RestClient;import org.springframework.http.*;import com.fasterxml.jackson.core.type.TypeReference;import com.fasterxml.jackson.databind.ObjectMapper;import org.springframework.http.client.JdkClientHttpRequestFactory;import org.springframework.web.util.UriComponentsBuilder;import java.net.http.HttpClient;import java.net.URI;import java.time.*;import java.util.*;import java.util.concurrent.*;
 @SpringBootApplication @RestController
 public class Application {
  final String env=System.getenv().getOrDefault("KRA_ENVIRONMENT","sandbox"),base=env.equals("production")?"https://api.kra.go.ke":"https://sbx.kra.go.ke";
@@ -23,9 +23,9 @@ public class Application {
   try{
    Map<String,String> paths=mapper.readValue(System.getenv().getOrDefault("KRA_SERVICE_PATHS_JSON","{}"),new TypeReference<>(){});
    String path=paths.get(service);if(path==null||!path.startsWith("/")||path.startsWith("//"))return ResponseEntity.status(501).body(Map.of("error",Map.of("code","service_not_configured","message","No verified KRA endpoint mapping configured")));
-   Map<String,String> methods=mapper.readValue(System.getenv().getOrDefault("KRA_SERVICE_METHODS_JSON","{}"),new TypeReference<>(){});String method=methods.getOrDefault(service,"POST").toUpperCase();if(!method.equals("POST"))return ResponseEntity.status(501).body(Map.of("detail","Catalog operations currently require POST; configure the official KRA method before use"));
-   String upstreamBase=base;if(service.equals("etims-oscu-integrator-automated-testing"))upstreamBase=System.getenv().getOrDefault("KRA_ETIMS_BASE_URL","");try{URI u=URI.create(upstreamBase);if(!"https".equals(u.getScheme())||u.getHost()==null||!u.getHost().endsWith(".kra.go.ke"))return ResponseEntity.status(501).body(Map.of("error",Map.of("code","service_base_not_configured","message","Set a verified HTTPS KRA base URL for this service")));}catch(Exception ex){return ResponseEntity.status(501).body(Map.of("error",Map.of("code","service_base_not_configured","message","Set a verified HTTPS KRA base URL for this service")));}String tok=token(ck,cs);Object payload=body.get("payload");Map result;
-   try{result=method.equals("POST")?http.post().uri(upstreamBase+path).header("Authorization","Bearer "+tok).body(payload).retrieve().body(Map.class):http.get().uri(upstreamBase+path).header("Authorization","Bearer "+tok).retrieve().body(Map.class);}
+   Map<String,String> methods=mapper.readValue(System.getenv().getOrDefault("KRA_SERVICE_METHODS_JSON","{}"),new TypeReference<>(){});String method=methods.getOrDefault(service,"POST").toUpperCase();if((!method.equals("POST")&&!method.equals("GET"))||(method.equals("GET")&&SERVICES.get(service)))return ResponseEntity.status(501).body(Map.of("detail","Unsupported or unsafe configured HTTP method"));
+   String upstreamBase=base;if(service.equals("etims-oscu-integrator-automated-testing"))upstreamBase=System.getenv().getOrDefault("KRA_ETIMS_BASE_URL","");try{URI u=URI.create(upstreamBase);if(!"https".equals(u.getScheme())||u.getHost()==null||!u.getHost().endsWith(".kra.go.ke"))return ResponseEntity.status(501).body(Map.of("error",Map.of("code","service_base_not_configured","message","Set a verified HTTPS KRA base URL for this service")));}catch(Exception ex){return ResponseEntity.status(501).body(Map.of("error",Map.of("code","service_base_not_configured","message","Set a verified HTTPS KRA base URL for this service")));}String tok=token(ck,cs);Object payload=body.get("payload");URI target=targetUri(upstreamBase,path,payload,method);Map result;
+   try{result=method.equals("POST")?http.post().uri(target).header("Authorization","Bearer "+tok).body(payload).retrieve().body(Map.class):http.get().uri(upstreamBase+path).header("Authorization","Bearer "+tok).retrieve().body(Map.class);}
    catch(org.springframework.web.client.HttpClientErrorException.Unauthorized ex){cache.remove(ck);tok=token(ck,cs);result=method.equals("POST")?http.post().uri(upstreamBase+path).header("Authorization","Bearer "+tok).body(payload).retrieve().body(Map.class):http.get().uri(upstreamBase+path).header("Authorization","Bearer "+tok).retrieve().body(Map.class);}
    if(result==null)result=Map.of();if(ik!=null)idempotency.put(ik,Map.of("fingerprint",fingerprint,"data",result));return ResponseEntity.ok(result);
   }catch(org.springframework.web.client.RestClientResponseException e){return ResponseEntity.status(e.getStatusCode().value()==429?429:502).body(err("kra_upstream_error","KRA service request failed"));}
@@ -45,6 +45,18 @@ public class Application {
    Map d=http.post().uri(base+path).header("Authorization","Bearer "+tok).body(payload).retrieve().body(Map.class);Map rec=d.get("PINDATA") instanceof Map?(Map)d.get("PINDATA"):d;String pin=Objects.toString(rec.get("KRAPIN"),null),name=Objects.toString(rec.get("Name"),null);
    if(pin==null&&name==null)return ResponseEntity.status(502).body(err("unexpected_response","Unexpected KRA response"));return ResponseEntity.ok(new Result(true,pin,name,env,false,null));
   }catch(Exception e){return ResponseEntity.status(502).body(err("upstream_error","KRA request failed; details withheld"));}
+ }
+ URI targetUri(String upstreamBase,String path,Object payload,String method){
+  String normalized=upstreamBase.replaceAll("/+$","")+path;
+  var builder=UriComponentsBuilder.fromUriString(normalized);
+  if(method.equals("GET")&&payload instanceof Map<?,?> values){
+   for(var entry:values.entrySet()){
+    Object value=entry.getValue();
+    if(value instanceof Map<?,?>||value instanceof Collection<?>)throw new IllegalArgumentException("GET query payload values must be scalar");
+    if(value!=null)builder.queryParam(Objects.toString(entry.getKey()),value);
+   }
+  }
+  return builder.build().encode().toUri();
  }
  String idemDigest(String value){try{return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8)));}catch(Exception e){throw new IllegalStateException(e);}}
  Map<String,Object> err(String c,String m){return Map.of("error",Map.of("code",c,"message",m));}
