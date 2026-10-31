@@ -40,9 +40,11 @@ class KraPinApp
   if id=='authorization';return reply(200,{access_token:token(ck,cs),token_type:'Bearer'});end
   upstream_path=@service_paths[id];return reply(501,{error:{code:'service_not_configured',message:'No verified KRA endpoint mapping configured'}}) unless upstream_path.is_a?(String)&&upstream_path.start_with?('/')&&!upstream_path.start_with?('//')
   method=(@service_methods[id]||'POST').upcase;return reply(500,{detail:'Only GET and POST mappings are supported'}) unless ['GET','POST'].include?(method)
+  upstream_base=id=='etims-oscu-integrator-automated-testing' ? ENV.fetch('KRA_ETIMS_BASE_URL','') : @base
   begin
-   access=token(ck,cs);response=upstream_request(method,upstream_path,body['payload'],access)
-   if response.code.to_i==401;@cache.delete(ck);access=token(ck,cs);response=upstream_request(method,upstream_path,body['payload'],access);end
+   parsed_base=URI(upstream_base);return reply(501,{error:{code:'service_base_not_configured',message:'Set a verified HTTPS KRA base URL for this service'}}) unless parsed_base.scheme=='https'&&parsed_base.host&.end_with?('.kra.go.ke')
+   access=token(ck,cs);response=upstream_request(method,upstream_base,upstream_path,body['payload'],access)
+   if response.code.to_i==401;@cache.delete(ck);access=token(ck,cs);response=upstream_request(method,upstream_base,upstream_path,body['payload'],access);end
    data=JSON.parse(response.body.empty? ? '{}' : response.body)
    return reply(response.code.to_i==429 ? 429 : 502,{error:{code:'kra_upstream_error',message:'KRA service request failed'}}) unless response.is_a?(Net::HTTPSuccess)
    @mutex.synchronize{@idempotency[ik]=data} if ik
@@ -51,8 +53,8 @@ class KraPinApp
   rescue StandardError;reply(502,{error:{code:'upstream_error',message:'KRA service request failed'}})
   end
  end
- def upstream_request(method,path,payload,access)
-  uri=URI("#{@base}#{path}");request=method=='GET' ? Net::HTTP::Get.new(uri) : Net::HTTP::Post.new(uri)
+ def upstream_request(method,base_url,path,payload,access)
+  uri=URI("#{base_url}#{path}");request=method=='GET' ? Net::HTTP::Get.new(uri) : Net::HTTP::Post.new(uri)
   request['Authorization']="Bearer #{access}";request['Content-Type']='application/json';request.body=JSON.generate(payload) if method=='POST'
   Net::HTTP.start(uri.hostname,uri.port,use_ssl:true,open_timeout:5,read_timeout:20){|http|http.request(request)}
  end
