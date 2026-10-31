@@ -37,3 +37,22 @@ test('read-only operation uses fixed sandbox URLs and bearer auth', async () => 
   assert.equal(calls[1].url, 'https://sbx.kra.go.ke/etims-oscu/api/v1/branchList');
   assert.equal((calls[1].options.headers as Record<string, string>).Authorization, 'Bearer token');
 });
+
+
+test('mutating 5xx and malformed responses are marked as unknown outcomes', async () => {
+  const responses = [
+    new Response('{"error":"temporary"}', { status: 503 }),
+    new Response('not-json', { status: 200 }),
+  ];
+  for (const operationResponse of responses) {
+    const fetchImpl: typeof fetch = async input => String(input).includes('/v1/token/generate')
+      ? new Response(JSON.stringify({ access_token: 'token', expires_in: 3600 }), { status: 200 })
+      : operationResponse;
+    const client = new DirectOscuClient({ consumerKey: 'key', consumerSecret: 'secret', appId: 'app', fetchImpl });
+    await assert.rejects(
+      client.invoke('save-item', { itemCd: 'item-1' }, { tin: 'P1', bhfId: '00', cmcKey: 'ctx' }, { confirmMutation: true }),
+      error => error instanceof Error && (error as Error & { code?: string; outcomeUnknown?: boolean }).code === 'oscu_outcome_unknown'
+        && (error as Error & { outcomeUnknown?: boolean }).outcomeUnknown === true,
+    );
+  }
+});
