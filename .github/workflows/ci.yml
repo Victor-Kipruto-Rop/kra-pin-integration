@@ -31,4 +31,11 @@ jobs:
         run: python -m py_compile ../scripts/run-oscu-sandbox-check.py app/dotenv_loader.py
       - run: pip install -r requirements-dev.txt
       - run: ruff check .
-      - run: pytest -q
+      - run: mkdir -p reports && pytest -q --junitxml=reports/python-junit.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: python-junit-${{ matrix.python }}
+          path: server/reports/python-junit.xml
+          if-no-files-found: ignore
+          retention-days: 14
