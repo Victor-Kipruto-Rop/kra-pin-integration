@@ -16,3 +16,8 @@ For eTIMS OSCU automated testing, set KRA_ETIMS_BASE_URL to the exact HTTPS KRA 
 ### Upstream method and authorization safety
 
 The public proxy endpoint is always POST. Each verified KRA mapping may use GET (payload fields become query parameters) or POST (payload is sent as JSON); GET is rejected for mutating operations. The `authorization` catalog operation obtains the KRA bearer token internally and returns only authorization status metadata. The raw token is never returned to API clients.
+
+
+## Direct eTIMS OSCU sandbox SDK
+
+Use `KraPin\\DirectOscuClient` from `src/DirectOscuClient.php` in server-side PHP only. The client uses the fixed sandbox host, Basic token acquisition and bearer-authenticated POST calls. Mutations require explicit confirmation; the client never retries a submitted request. A transport failure on a mutation raises `OscuUnknownOutcomeException`; reconcile the operation with KRA before resubmitting. Request and response schemas remain provisional pending KRA confirmation.
