@@ -57,7 +57,7 @@ class KraPinApp
   ck=ENV.fetch('KRA_PIN_CONSUMER_KEY','');cs=ENV.fetch('KRA_PIN_CONSUMER_SECRET','')
   if id=='authorization';return reply(200,{access_token:token(ck,cs),token_type:'Bearer'});end
   upstream_path=@service_paths[id];return reply(501,{error:{code:'service_not_configured',message:'No verified KRA endpoint mapping configured'}}) unless upstream_path.is_a?(String)&&upstream_path.start_with?('/')&&!upstream_path.start_with?('//')
-  method=(@service_methods[id]||'POST').upcase;return reply(500,{detail:'Only GET and POST mappings are supported'}) unless ['GET','POST'].include?(method)
+  method=(@service_methods[id]||'POST').upcase;return reply(501,{detail:'Catalog operations currently require POST; configure the official KRA method before use'}) unless method=='POST'
   upstream_base=id=='etims-oscu-integrator-automated-testing' ? ENV.fetch('KRA_ETIMS_BASE_URL','') : @base
   begin
    parsed_base=URI(upstream_base);return reply(501,{error:{code:'service_base_not_configured',message:'Set a verified HTTPS KRA base URL for this service'}}) unless parsed_base.scheme=='https'&&parsed_base.host&.end_with?('.kra.go.ke')
