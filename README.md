@@ -113,14 +113,14 @@ Example structure only — these are placeholders, not real KRA paths:
 
 ## Separate direct eTIMS OSCU API
 
-The supplied Postman collection also documents **23 direct OSCU sandbox POST operations** at `https://sbx.kra.go.ke/etims-oscu/api/v1`. This is not the GavaConnect catalog endpoint above and is not wired into the seven-language dispatcher. See [direct OSCU integration notes](docs/etims-oscu-direct-integration.md) and the [machine-readable endpoint inventory](contracts/etims-oscu-direct.endpoints.json).
+The supplied Postman collection also documents **23 direct OSCU sandbox POST operations** at `https://sbx.kra.go.ke/etims-oscu/api/v1`. This is not the GavaConnect catalog endpoint above. Separate direct OSCU SDK clients are now provided for Python, Go, Java, JavaScript, TypeScript, PHP and Ruby under each language directory; they are distinct from the GavaConnect service dispatchers. See [direct OSCU integration notes](docs/etims-oscu-direct-integration.md) and the [machine-readable endpoint inventory](contracts/etims-oscu-direct.endpoints.json).
 
-The inventory captures the token endpoint, methods, paths and header context. A separate Python direct-OSCU sandbox adapter is now implemented; formal request/response schemas, live sandbox tests and applicable certification are still outstanding. The supplied collection contains malformed sample JSON and one malformed sales property; see the integration notes. Never reuse GavaConnect bearer tokens or proxy API keys for the direct OSCU host.
+The inventory captures the token endpoint, methods, paths and header context. A separate Python direct-OSCU sandbox adapter is implemented, and all seven language directories now include server-side direct OSCU SDK clients with the same 23-operation manifest, fixed sandbox hosts, explicit mutation confirmation and no automatic mutation retries. Formal request/response schemas, live sandbox tests and applicable certification are still outstanding. The supplied collection contains malformed sample JSON and one malformed sales property; see the integration notes. Never reuse GavaConnect bearer tokens or proxy API keys for the direct OSCU host.
 
 
 ### Direct OSCU adapter (Python reference)
 
-The Python server now exposes `POST /v1/etims/oscu/{operation_id}` when `ETIMS_OSCU_ENABLED=true`. Configure the separate sandbox application credentials and app ID in server environment variables; supply tenant context using `X-ETIMS-TIN`, `X-ETIMS-BHF-ID`, and `X-ETIMS-CMC-KEY`. Write operations require an `Idempotency-Key`. This adapter is sandbox-only, separate from GavaConnect, and has not yet been verified against live KRA sandbox credentials. See [direct OSCU integration notes](docs/etims-oscu-direct-integration.md).
+The Python server exposes `POST /v1/etims/oscu/{operation_id}` when `ETIMS_OSCU_ENABLED=true`. Configure the separate sandbox application credentials and app ID in server environment variables; supply tenant context using `X-ETIMS-TIN`, `X-ETIMS-BHF-ID`, and `X-ETIMS-CMC-KEY`. Write operations require an `Idempotency-Key`. This adapter is sandbox-only, separate from GavaConnect, and has not yet been verified against live KRA sandbox credentials. See [direct OSCU integration notes](docs/etims-oscu-direct-integration.md).
 
 ## KRA setup and verification
 
@@ -138,7 +138,7 @@ The PIN-specific legacy routes still contain example response mappings; confirm 
 - Use TLS, high-entropy proxy API keys, secret management and rotation.
 - Do not log full PINs, national IDs, credentials, tokens or raw KRA payloads.
 - Collect and validate taxpayer consent in the calling application.
-- In-memory token caches and rate limiters are process-local. Use Redis or gateway enforcement for multiple replicas.
+- The Python API uses Redis-backed shared rate limiting and idempotency when configured; its memory fallback is development/test only. The separate language GavaConnect server templates still have process-local state and need shared gateway enforcement before multi-replica deployment.
 - A PIN match is not proof of identity or tax compliance.
 - Mock tests are not KRA certification. Production use is subject to KRA approval and current terms.
 
@@ -163,3 +163,18 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md). MIT licen
 ## Shared idempotency and local Docker stack
 
 Mutating KRA and direct OSCU operations now use a shared idempotency store abstraction. Local development and tests use an in-memory store unless Redis is configured. Production requires private TLS Redis (`IDEMPOTENCY_REDIS_URL=rediss://...`) and a valid Fernet `IDEMPOTENCY_ENCRYPTION_KEY`; cached KRA responses are encrypted before persistence. Redis also coordinates rate limiting across application replicas. See [production hardening and local stack](docs/production-hardening-and-local-stack.md) for configuration, retention, recovery and Docker Compose instructions. The local Compose stack binds the API to loopback and does not publish Redis.
+
+
+### Seven-language direct OSCU SDKs
+
+| Language | Client | Test location |
+|---|---|---|
+| Python | `languages/python/kra_pin_oscu.py` | `languages/python/test_kra_pin_oscu.py` |
+| Go | `languages/go/oscu/client.go` | `languages/go/oscu/client_test.go` |
+| Java | `languages/java/.../oscu/DirectOscuClient.java` | `languages/java/.../oscu/DirectOscuClientTest.java` |
+| JavaScript | `languages/javascript/src/oscu-client.js` | `languages/javascript/src/oscu-client.test.js` |
+| TypeScript | `languages/typescript/src/oscu-client.ts` | `languages/typescript/src/oscu-client.test.ts` |
+| PHP | `languages/php/src/DirectOscuClient.php` | `languages/php/tests/DirectOscuClientTest.php` |
+| Ruby | `languages/ruby/oscu_client.rb` | `languages/ruby/spec/oscu_client_spec.rb` |
+
+All seven clients load the same endpoint inventory, reject unknown operation IDs, require explicit confirmation for operations provisionally classified as mutating, and avoid automatic retries. They use only the KRA sandbox host. Their manifest copies and the language-neutral OpenAPI file are checked by `scripts/validate-oscu-contract.py`. The SDKs are not substitutes for KRA-issued schemas, certification or production approval.
