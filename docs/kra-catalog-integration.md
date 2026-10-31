@@ -62,14 +62,14 @@ An absent mapping returns HTTP 501. A repeated idempotency key with a different 
 
 ## Separate direct eTIMS OSCU API
 
-The direct OSCU Postman collection is documented separately in [etims-oscu-direct-integration.md](etims-oscu-direct-integration.md), with a machine-readable [23-operation endpoint inventory](../contracts/etims-oscu-direct.endpoints.json). These direct endpoints use the sandbox base URL `https://sbx.kra.go.ke/etims-oscu/api/v1` and a separate OSCU authentication/device context. They are **not** GavaConnect service paths and must not be added to `KRA_SERVICE_PATHS_JSON`. A direct OSCU adapter is not yet implemented. Never forward a GavaConnect bearer token to the OSCU host.
+The direct OSCU Postman collection is documented separately in [etims-oscu-direct-integration.md](etims-oscu-direct-integration.md), with a machine-readable [23-operation endpoint inventory](../contracts/etims-oscu-direct.endpoints.json). These direct endpoints use the sandbox base URL `https://sbx.kra.go.ke/etims-oscu/api/v1` and a separate OSCU authentication/device context. They are **not** GavaConnect service paths and must not be added to `KRA_SERVICE_PATHS_JSON`. A separate Python direct OSCU sandbox adapter and server-side SDK clients for Python, Go, Java, JavaScript, TypeScript, PHP and Ruby are implemented. Formal schemas, live sandbox validation and KRA certification remain pending. Never forward a GavaConnect bearer token to the OSCU host.
 
 ## Response and safety
 
 - Successful upstream JSON is passed through without pretending every service has the same response schema.
 - Invalid upstream JSON and upstream failures are returned as sanitized proxy errors.
 - Mock mode does not invent successful responses for returns, TCC applications, PRN generation or eTIMS testing. Unsupported routes return HTTP 501 until a verified adapter is configured.
-- Token caches, rate limiters and idempotency caches are process-local; they are not sufficient for multi-replica production. Use shared Redis/database-backed implementations before horizontal scaling.
+- The Python FastAPI service now supports shared Redis-backed rate limiting and idempotency, with encrypted cached responses and tenant-scoped OSCU idempotency keys. Production requires TLS Redis and a Fernet encryption key. The independent Go/Java/JavaScript/TypeScript/PHP/Ruby GavaConnect server templates still have process-local state and need shared gateway/state coordination before horizontal scaling.
 - No service is considered sandbox-verified until its official payload, response, error and replay cases have passing integration tests using approved KRA credentials.
 
 ## Implemented GavaConnect contract: Fetch Taxpayer Obligations
