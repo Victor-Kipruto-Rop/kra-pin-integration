@@ -11,7 +11,7 @@ This runner executes **one explicitly selected** operation from the direct OSCU 
 - Credentials and tenant context are read from environment variables, never command-line arguments.
 - Evidence stores request/response SHA-256 hashes and response structure only. It never stores raw request or response bodies, credentials, bearer tokens, tenant identifiers, or authorization headers.
 - Evidence files are created exclusively with owner-only permissions where supported. Existing paths are not overwritten.
-- Mutating operations require a caller-provided idempotency key. The key itself is not saved; only its hash is.
+- Mutating operations require a local approval/ticket reference. It is not sent to KRA and is not an idempotency guarantee; only its hash is saved. The adapter's in-memory replay protection does not make this standalone runner durable across processes.
 - The adapter never retries an operation after a timeout. An unknown outcome must be reconciled with KRA before resubmission.
 - Do not put real taxpayer payloads or secrets in the repository. Keep fixture files outside version control.
 
@@ -58,7 +58,7 @@ python scripts/run-oscu-sandbox-check.py \
   --confirm-sandbox
 ```
 
-For an operation marked mutating, add a unique `--idempotency-key` of 16-128 characters. Do not blindly rerun a write operation after a timeout.
+For an operation marked mutating, provide `--change-reference` with the approval or test-ticket reference (6-128 characters). This is an audit reference only, not an upstream idempotency header. Do not blindly rerun a write operation after a timeout.
 
 Evidence is written under `artifacts/oscu-evidence/` by default. Review and retain it according to your organization’s data-retention policy. The artifact proves only that the selected call returned successfully from the sandbox endpoint; it is not KRA certification.
 
@@ -71,7 +71,7 @@ Each evidence record includes timestamp, operation ID/path, environment, payload
 Before calling this integration certified, collect:
 1. KRA-issued sandbox app credentials and approved app ID.
 2. Written confirmation of request fields, required headers, response schemas and error semantics for each tested operation.
-3. Written confirmation of which operations mutate KRA state and how KRA supports idempotency/replay.
+3. Written confirmation of which operations mutate KRA state and whether KRA supports an idempotency/replay mechanism.
 4. Successful tests using KRA-approved non-production taxpayer/device data.
 5. Redacted evidence artifacts, test date, operation list and KRA support/certification reference.
 6. A separate approved production base URL and production credentials. This code intentionally rejects production for direct OSCU.
