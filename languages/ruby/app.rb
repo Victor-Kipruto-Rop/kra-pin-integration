@@ -1,4 +1,5 @@
-require 'json'\nrequire 'rack'
+require 'json'
+require 'rack'
 require 'net/http'
 require 'uri'
 require 'base64'
