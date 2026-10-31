@@ -1,3 +1,4 @@
+require 'stringio'
 ENV['PROXY_API_KEYS'] ||= 'ci-test-key'
 ENV['KRA_MOCK'] ||= 'true'
 ENV['KRA_ENVIRONMENT'] ||= 'sandbox'
