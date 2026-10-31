@@ -45,3 +45,28 @@ RSpec.describe KraPin::DirectOscuClient do
     expect(calls[1][1]['Authorization']).to eq('Bearer token')
   end
 end
+
+
+  it 'marks mutating server errors and malformed responses as unknown outcomes' do
+    [
+      { status: 503, body: '{"error":"temporary"}' },
+      { status: 200, body: 'not-json' }
+    ].each do |operation_response|
+      transport = lambda do |url, _headers, _body, _timeout|
+        if url.include?('/v1/token/generate')
+          { status: 200, body: '{"access_token":"token","expires_in":3600}' }
+        else
+          operation_response
+        end
+      end
+      client = build_client(transport)
+      expect do
+        client.invoke('save-item', { 'itemCd' => 'item-1' },
+                      { 'tin' => 'P1', 'bhfId' => '00', 'cmcKey' => 'ctx' },
+                      confirm_mutation: true)
+      end.to raise_error(KraPin::OscuError) { |error| 
+        expect(error.code).to eq('oscu_outcome_unknown')
+        expect(error.outcome_unknown).to be true
+      }
+    end
+  end
