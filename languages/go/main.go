@@ -68,7 +68,7 @@ func getToken(c Config,client *http.Client)(string,error) {
  tokenCache.m[c.Key]=Token{value,time.Now().Add(ttl)};return value,nil
 }
 func invoke(c Config,client *http.Client,service string,payload map[string]any)(int,any,error) {
- if service=="authorization" { tok,err:=getToken(c,client);if err!=nil{return 0,nil,err};return 200,map[string]any{"access_token":tok,"token_type":"Bearer"},nil }
+ if service=="authorization" { tok,err:=getToken(c,client);if err!=nil{return 0,nil,err};_ = tok;return 200,map[string]any{"authorized":true,"token_type":"Bearer"},nil }
  path:=c.Paths[service];if path==""||!strings.HasPrefix(path,"/")||strings.HasPrefix(path,"//"){return 501,map[string]any{"error":map[string]string{"code":"service_not_configured","message":"No verified KRA endpoint mapping configured"}},nil}
  method:=strings.ToUpper(c.Methods[service]);if method==""{method="POST"};if method!="POST"{return 501,map[string]string{"detail":"Catalog operations currently require POST; configure the official KRA method before use"},nil}
  upstreamBase:=c.Base;if service=="etims-oscu-integrator-automated-testing"{upstreamBase=c.EtimsBase};parsed,parseErr:=url.Parse(upstreamBase);if parseErr!=nil||parsed.Scheme!="https"||parsed.Host==""||!strings.HasSuffix(parsed.Hostname(),".kra.go.ke"){return 501,map[string]string{"code":"service_base_not_configured","message":"Set a verified HTTPS KRA base URL for this service"},nil}
