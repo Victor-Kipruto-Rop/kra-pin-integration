@@ -115,12 +115,14 @@ Example structure only — these are placeholders, not real KRA paths:
 contracts/kra-services.json records stable IDs and safety metadata. Add service-specific payload and response schemas only from current KRA specifications and sandbox examples.
 ## KRA setup and verification
 
-1. Register at [developer.go.ke](https://developer.go.ke), create an application and subscribe to PIN Checker and, if required, PIN Checker By ID.
-2. Configure sandbox consumer credentials securely and set `KRA_MOCK=false`.
-3. Confirm success/not-found response shapes with current KRA sandbox data.
-4. Request production access from KRA and use separately issued production credentials.
+1. Register at [developer.go.ke](https://developer.go.ke), create the developer application and subscribe to each KRA API your product needs. Not every API is necessarily enabled for every application.
+2. Obtain the current API specification for every subscribed service, including method, path, request schema, response schema, scopes, and error codes.
+3. Configure sandbox consumer credentials securely, set `KRA_MOCK=false`, and populate `KRA_SERVICE_PATHS_JSON` / `KRA_SERVICE_METHODS_JSON` from those official specifications.
+4. Test each read-only and mutating operation separately in the approved sandbox. Verify token expiry, duplicate/idempotency behavior, rejected requests and upstream errors.
+5. For eTIMS OSCU, use the KRA-published OSCU sandbox/production host and the taxpayer's approved integration configuration; set `KRA_ETIMS_BASE_URL` accordingly.
+6. Request production access from KRA and use separately issued production credentials.
 
-The Python reference currently documents response mappings such as `PINDATA`, `KRAPIN`, `Name` and error code `30002` as assumptions to confirm. New language implementations use the same cautious mapping. Do not claim sandbox or production verification until it has actually succeeded.
+The PIN-specific legacy routes still contain example response mappings such as `PINDATA`, `KRAPIN`, `Name` and error code `30002`; confirm them against sandbox. The 22-service dispatcher passes through the service-specific JSON response and must be paired with verified per-service schemas before release. Do not claim sandbox or production verification until it has actually succeeded.
 
 ## Security and limitations
 
@@ -137,6 +139,7 @@ The Python reference currently documents response mappings such as `PINDATA`, `K
 
 - [Architecture](docs/architecture.md)
 - [OpenAPI contract](contracts/openapi.yaml)
+- [KRA 22-service integration guide](docs/kra-catalog-integration.md)
 - [Language guides](docs/language-guides/README.md)
 - [Security](docs/security.md)
 - [Production readiness assessment](PRODUCTION_READINESS.md)
