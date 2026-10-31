@@ -46,6 +46,7 @@ class Settings:
     etims_oscu_consumer_secret: str = ""
     etims_oscu_app_id: str = ""
     idempotency_redis_url: str = ""
+    idempotency_encryption_key: str = ""
     idempotency_ttl_seconds: int = 604800
 
     @property
@@ -84,6 +85,7 @@ def load_settings() -> Settings:
         etims_oscu_consumer_secret=os.environ.get("ETIMS_OSCU_CONSUMER_SECRET", ""),
         etims_oscu_app_id=os.environ.get("ETIMS_OSCU_APP_ID", ""),
         idempotency_redis_url=os.environ.get("IDEMPOTENCY_REDIS_URL", ""),
+        idempotency_encryption_key=os.environ.get("IDEMPOTENCY_ENCRYPTION_KEY", ""),
         idempotency_ttl_seconds=int(os.environ.get("IDEMPOTENCY_TTL_SECONDS", "604800")),
     )
 
