@@ -53,11 +53,6 @@ class KraPinApp
   idem=req.get_header('HTTP_IDEMPOTENCY_KEY');return reply(400,{detail:'Idempotency-Key (16-128 chars) is required'}) if mutates&&(idem.nil?||idem.length<16||idem.length>128)
   ik=idem ? Digest::SHA256.hexdigest("#{key}:#{id}:#{idem}") : nil
   fingerprint=Digest::SHA256.hexdigest(JSON.generate(canonicalize(body['payload'])))
-  cached=@mutex.synchronize{@idempotency[ik]} if ik
-  if cached
-   return reply(409,{error:{code:'idempotency_conflict',message:'Idempotency-Key was already used with a different payload'}}) unless cached[:fingerprint]==fingerprint
-   return reply(200,cached[:data])
-  end
   return reply(501,{error:{code:'mock_service_not_implemented',message:'Configure a verified KRA sandbox mapping; no filing or payment mock is fabricated'}}) if @mock
   ck=ENV.fetch('KRA_PIN_CONSUMER_KEY','');cs=ENV.fetch('KRA_PIN_CONSUMER_SECRET','')
   if id=='authorization';token(ck,cs);return reply(200,{authorized:true,token_type:'Bearer'});end
@@ -66,13 +61,54 @@ class KraPinApp
   upstream_base=@base
   begin
    parsed_base=URI(upstream_base);return reply(501,{error:{code:'service_base_not_configured',message:'Set a verified HTTPS KRA base URL for this service'}}) unless parsed_base.scheme=='https'&&parsed_base.host&.end_with?('.kra.go.ke')
-   access=token(ck,cs);response=upstream_request(method,upstream_base,upstream_path,body['payload'],access)
-   if response.code.to_i==401;@cache.delete(ck);access=token(ck,cs);response=upstream_request(method,upstream_base,upstream_path,body['payload'],access);end
-   data=JSON.parse(response.body.empty? ? '{}' : response.body)
-   return reply(response.code.to_i==429 ? 429 : 502,{error:{code:'kra_upstream_error',message:'KRA service request failed'}}) unless response.is_a?(Net::HTTPSuccess)
-   @mutex.synchronize{@idempotency[ik]={fingerprint:fingerprint,data:data}} if ik
-   reply(200,data)
-  rescue JSON::ParserError;reply(502,{error:{code:'invalid_upstream_response',message:'KRA returned non-JSON content'}})
+   if ik
+    prior=@mutex.synchronize do
+     existing=@idempotency[ik]
+     @idempotency[ik]={fingerprint:fingerprint,state:'pending'} unless existing
+     existing
+    end
+    if prior
+     return reply(409,{error:{code:'idempotency_conflict',message:'Idempotency-Key was already used with a different payload'}}) unless prior[:fingerprint]==fingerprint
+     return reply(200,prior[:data]) if prior[:state]=='complete'
+     return reply(409,{error:{code:'idempotency_outcome_unknown',message:'Previous request outcome is unknown; reconcile with KRA before retrying'}})
+    end
+   end
+   submitted=false
+   begin
+    access=token(ck,cs)
+    submitted=true
+    response=upstream_request(method,upstream_base,upstream_path,body['payload'],access)
+    if response.code.to_i==401&&!mutates;@cache.delete(ck);access=token(ck,cs);submitted=true;response=upstream_request(method,upstream_base,upstream_path,body['payload'],access);end
+    data=JSON.parse(response.body.empty? ? '{}' : response.body)
+    unless response.is_a?(Net::HTTPSuccess)
+     if ik
+      @mutex.synchronize do
+       if response.code.to_i>=500
+        @idempotency[ik]={fingerprint:fingerprint,state:'unknown'}
+       else
+        @idempotency.delete(ik)
+       end
+      end
+     end
+     return reply(response.code.to_i==429 ? 429 : 502,{error:{code:'kra_upstream_error',message:'KRA service request failed'}})
+    end
+    @mutex.synchronize{@idempotency[ik]={fingerprint:fingerprint,state:'complete',data:data}} if ik
+    reply(200,data)
+   rescue JSON::ParserError
+    @mutex.synchronize{@idempotency[ik]={fingerprint:fingerprint,state:'unknown'}} if ik&&submitted
+    reply(502,{error:{code:'invalid_upstream_response',message:'KRA returned non-JSON content'}})
+   rescue StandardError
+    if ik
+     @mutex.synchronize do
+      if submitted
+       @idempotency[ik]={fingerprint:fingerprint,state:'unknown'}
+      else
+       @idempotency.delete(ik)
+      end
+     end
+    end
+    reply(502,{error:{code:'upstream_error',message:'KRA service request failed'}})
+   end
   rescue StandardError;reply(502,{error:{code:'upstream_error',message:'KRA service request failed'}})
   end
  end
