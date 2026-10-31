@@ -9,7 +9,7 @@ This runner executes **one explicitly selected** operation from the direct OSCU 
 - No network call occurs unless both `--execute` and `--confirm-sandbox` are supplied.
 - The runner uses the fixed sandbox host in `DirectOscuClient`; there is no arbitrary URL argument.
 - Credentials and tenant context are read from environment variables, never command-line arguments.
-- Evidence stores request/response SHA-256 hashes and response structure only. It never stores raw request or response bodies, credentials, bearer tokens, tenant identifiers, or authorization headers.
+- Evidence stores request/response SHA-256 hashes and anonymous response structure only. It never stores raw request or response bodies, object field names (which may themselves contain taxpayer identifiers), credentials, bearer tokens, tenant identifiers, or authorization headers.
 - Evidence files are created exclusively with owner-only permissions where supported. Existing paths are not overwritten.
 - Mutating operations require a local approval/ticket reference. It is not sent to KRA and is not an idempotency guarantee; only its hash is saved. The adapter's in-memory replay protection does not make this standalone runner durable across processes.
 - The adapter never retries an operation after a timeout. An unknown outcome must be reconciled with KRA before resubmission.
@@ -73,13 +73,13 @@ For a separately approved live sandbox test:
 3. Add these six environment secrets to `kra-sandbox` (not repository-wide secrets): `ETIMS_OSCU_CONSUMER_KEY`, `ETIMS_OSCU_CONSUMER_SECRET`, `ETIMS_OSCU_APP_ID`, `ETIMS_OSCU_TIN`, `ETIMS_OSCU_BHF_ID`, and `ETIMS_OSCU_CMC_KEY`.
 4. Add only KRA-approved, non-production JSON fixtures under `sandbox-fixtures/`. Do not commit real taxpayer data or secrets. The project intentionally supplies no invented request schemas.
 5. Open **Actions → KRA OSCU sandbox validation → Run workflow**. Supply the operation ID, fixture path, and approval reference for mutating operations. Explicitly check `confirm_sandbox`.
-6. Review the protected environment approval, workflow result and redacted evidence artifact. The evidence contains hashes/shape metadata, not raw request or response values.
+6. Review the protected environment approval, workflow result and redacted evidence artifact. The evidence contains hashes, counts and anonymous shape metadata, not raw request or response values or object field names.
 
 The workflow runs one selected operation only. It is not a full 23-operation certification suite. If the environment has no required reviewers configured, GitHub may allow execution without human approval; configure protection before adding credentials.
 
 ## Evidence format
 
-Each evidence record includes timestamp, operation ID/path, environment, payload hash, response hash, response shape, presence-only tenant-context indicators, and explicit redaction flags. It excludes raw values. Hashes are integrity references, not proof of taxpayer identity or business correctness.
+Each evidence record includes timestamp, operation ID/path, environment, payload and response hashes, anonymous response shape/counts, presence-only tenant-context indicators, and explicit redaction flags. It excludes raw values and object field names. Hashes are integrity references, not proof of taxpayer identity or business correctness.
 
 ## Certification checklist
 
