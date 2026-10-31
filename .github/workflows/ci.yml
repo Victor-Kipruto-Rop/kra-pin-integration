@@ -28,7 +28,7 @@ jobs:
       - name: Validate KRA catalogs and OSCU contracts
         run: python ../scripts/validate-catalog.py && python ../scripts/validate-oscu-contract.py
       - name: Compile runner and configuration helpers
-        run: python -m py_compile ../scripts/run-oscu-sandbox-check.py app/dotenv_loader.py
+        run: python -m py_compile ../scripts/run-oscu-sandbox-check.py app/dotenv_loader.py app/idempotency.py
       - run: pip install -r requirements-dev.txt
       - run: ruff check .
       - run: mkdir -p reports && pytest -q --junitxml=reports/python-junit.xml
