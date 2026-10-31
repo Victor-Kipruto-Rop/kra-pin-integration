@@ -4,7 +4,8 @@ require 'net/http'
 require 'uri'
 require 'base64'
 require 'openssl'
-require 'thread'\nrequire 'digest'
+require 'thread'
+require 'digest'
 class KraPinApp
  def initialize
   @env=ENV.fetch('KRA_ENVIRONMENT','sandbox');raise 'KRA_ENVIRONMENT must be sandbox or production' unless ['sandbox','production'].include?(@env);@mock=ENV.fetch('KRA_MOCK','true')=='true';raise 'Mock mode forbidden in production' if @mock&&@env=='production';raise 'KRA credentials required when mock mode is disabled' if !@mock&&(ENV.fetch('KRA_PIN_CONSUMER_KEY','').empty?||ENV.fetch('KRA_PIN_CONSUMER_SECRET','').empty?)
@@ -13,7 +14,10 @@ class KraPinApp
  def call(env)
   req=Rack::Request.new(env);path=req.path
   return reply(200,{status:'ok',environment:@env,mock:@mock}) if req.get?&&path=='/health'
-  if req.post? && path.start_with?('/v1/kra/')\n   key=req.get_header('HTTP_X_API_KEY').to_s;return reply(401,{detail:'Invalid or missing X-API-Key'}) unless @keys.any?{|x|x.bytesize==key.bytesize&&secure_equal(x,key)};return reply(429,{detail:'Rate limit exceeded'}) unless rate(key);return invoke_service(req,path.delete_prefix('/v1/kra/'),key)\n  end\n  return reply(404,{detail:'Not found'}) unless req.post?&&['/v1/pin/verify','/v1/pin/verify-by-id'].include?(path)
+  if req.post? && path.start_with?('/v1/kra/')
+   key=req.get_header('HTTP_X_API_KEY').to_s;return reply(401,{detail:'Invalid or missing X-API-Key'}) unless @keys.any?{|x|x.bytesize==key.bytesize&&secure_equal(x,key)};return reply(429,{detail:'Rate limit exceeded'}) unless rate(key);return invoke_service(req,path.delete_prefix('/v1/kra/'),key)
+  end
+  return reply(404,{detail:'Not found'}) unless req.post?&&['/v1/pin/verify','/v1/pin/verify-by-id'].include?(path)
   key=req.get_header('HTTP_X_API_KEY').to_s;valid=@keys.any?{|x|x.bytesize==key.bytesize&&secure_equal(x,key)};return reply(401,{detail:'Invalid or missing X-API-Key'}) unless valid
   return reply(429,{detail:'Rate limit exceeded'}) unless rate(key)
   begin
@@ -58,7 +62,8 @@ class KraPinApp
   request['Authorization']="Bearer #{access}";request['Content-Type']='application/json';request.body=JSON.generate(payload) if method=='POST'
   Net::HTTP.start(uri.hostname,uri.port,use_ssl:true,open_timeout:5,read_timeout:20){|http|http.request(request)}
  end
-\n def reply(status,data);[status,{'content-type'=>'application/json'},[JSON.generate(data)]];end
+
+ def reply(status,data);[status,{'content-type'=>'application/json'},[JSON.generate(data)]];end
  def secure_equal(a,b);OpenSSL.fixed_length_secure_compare(a,b);rescue;false;end
  def rate(key);@mutex.synchronize{now=Time.now.to_f;q=(@hits[key]||[]).select{|t|now-t<60};return false if q.size>=30;q<<now;@hits[key]=q;true};end
  def token(key,secret)
