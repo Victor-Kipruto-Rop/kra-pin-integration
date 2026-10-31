@@ -2,7 +2,7 @@
 
 > **Current release classification: NOT PRODUCTION READY — validation required.**
 
-This project provides independent language templates for KRA PIN Checker integrations. It is not a KRA-certified product and this repository does not establish that KRA has approved any specific deployment.
+This project provides seven independent language templates with a shared dispatcher for all 22 KRA developer-catalog services. It is not a KRA-certified product and this repository does not establish that KRA has approved any specific deployment. It is not a KRA-certified product and this repository does not establish that KRA has approved any specific deployment.
 
 ## Release gates
 
@@ -24,18 +24,18 @@ A release may be marked production-ready only when every gate below has recorded
 
 ## What this repository currently does not prove
 
-- A mock lookup is not a real KRA API call.
+- A mock lookup is not a real KRA API call. Mock mode deliberately returns 501 for unimplemented catalog services rather than fabricating successful filing, PRN or certificate responses.
 - A green local test is not KRA certification or production approval.
-- The KRA endpoint hosts, response fields, not-found codes and authentication behavior must be confirmed against the current official developer documentation and sandbox.
+- The exact upstream path, HTTP method, scope, request fields, response fields, not-found codes and authentication behavior for each of the 22 services must be confirmed against current official KRA specifications and sandbox.
 - In-memory caches and rate limiters do not coordinate across replicas.
 - The PHP CLI Dockerfile uses PHP's built-in development server; production requires PHP-FPM behind a hardened web server or ingress.
-- A local PHP temporary-file rate limiter is not a distributed production rate limiter.
+- PHP's local file locks do not coordinate across multiple hosts or containers.\n- Catalog idempotency caches are process-local in most runtimes and are not a durable distributed idempotency store.
 - A PIN lookup result is not identity proof, tax compliance proof or a Tax Compliance Certificate.
 
 ## Required sign-off record
 
 For each release, attach the commit SHA and evidence for:
-1. CI workflow run URLs and all seven runtime test results.
+1. CI workflow run URLs and all seven runtime test results.\n2. Contract test evidence for all 22 services in all seven runtimes (renumber subsequent items accordingly).
 2. OpenAPI contract test report.
 3. KRA sandbox test report with credentials, PINs, taxpayer IDs and personal data redacted.
 4. KRA production approval reference (do not publish confidential approval documents).
@@ -46,6 +46,6 @@ For each release, attach the commit SHA and evidence for:
 
 ## Safe deployment posture
 
-Run one language implementation per deployment. Use the included PHP container only for local development; build a PHP-FPM production image and web-server/ingress configuration before deploying PHP. Set `KRA_ENVIRONMENT=production`, `KRA_MOCK=false`, use separately approved production credentials, terminate TLS at a trusted ingress, and store `PROXY_API_KEYS` in a secret manager. Do not expose consumer credentials to clients. Do not deploy this template unchanged as a multi-replica service until shared rate limiting and token coordination are configured.
+Run one language implementation per deployment. Use the included PHP container only for local development; build a PHP-FPM production image and web-server/ingress configuration before deploying PHP. Populate every KRA service path/method mapping from the current approved specifications, configure the eTIMS OSCU host separately, and use a shared durable idempotency store for all mutating operations. Set `KRA_ENVIRONMENT=production`, `KRA_MOCK=false`, use separately approved production credentials, terminate TLS at a trusted ingress, and store `PROXY_API_KEYS` in a secret manager. Do not expose consumer credentials to clients. Do not deploy this template unchanged as a multi-replica service until shared rate limiting and token coordination are configured.
 
 **Do not change this assessment to “Production Ready” until all gates are evidenced for the release commit.**
