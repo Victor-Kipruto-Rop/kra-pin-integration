@@ -3,8 +3,8 @@
 The proxy exposes stable service IDs for the full developer-catalog list. This document separates **catalog coverage** from **verified upstream implementation**.
 
 - Catalog registration: implemented in all seven templates.
-- Request/response schema: being added as official per-service Postman contracts are supplied; response examples remain outstanding for the two documented services.
-- Upstream path and HTTP method: configured only for services with supplied official Postman contracts; all others remain intentionally unconfigured.
+- Request/response schema: being added as official per-service Postman contracts are supplied; response examples remain outstanding for the two documented GavaConnect services.
+- Upstream path and HTTP method: configured only for services with supplied official GavaConnect Postman contracts; all others remain intentionally unconfigured.
 - Sandbox verification: not yet performed; approved application credentials and test data are required.
 
 Do not infer API paths, scopes, request fields, response fields, not-found codes or mutation semantics from the service display names.
@@ -32,7 +32,7 @@ Do not infer API paths, scopes, request fields, response fields, not-found codes
 | Import Certificate Checker by PIN | `import-certificate-checker-by-pin` | Awaiting official specification and sandbox test |
 | Import Certificate Checker by Cert Number | `import-certificate-checker-by-cert-number` | Awaiting official specification and sandbox test |
 | Invoice Checker | `invoice-checker` | Awaiting official specification and sandbox test |
-| eTIMS OSCU Integrator Automated Testing | `etims-oscu-integrator-automated-testing` | Awaiting official specification and sandbox test |
+| eTIMS OSCU Integrator Automated Testing | `etims-oscu-integrator-automated-testing` | Awaiting official GavaConnect specification and sandbox test |
 
 ## Required evidence for each service
 
@@ -48,8 +48,14 @@ Before enabling a service in a live deployment, record:
 
 ## Mapping configuration
 
-Use `contracts/kra-service-mappings.template.json` as the inventory. Empty paths intentionally return HTTP 501. Populate `KRA_SERVICE_PATHS_JSON` and `KRA_SERVICE_METHODS_JSON` from verified documentation; do not deploy placeholder paths.
+Use `contracts/kra-service-mappings.template.json` as the GavaConnect catalog inventory. Empty paths intentionally return HTTP 501. Populate `KRA_SERVICE_PATHS_JSON` and `KRA_SERVICE_METHODS_JSON` from verified documentation; do not deploy placeholder paths.
 
-## eTIMS OSCU
+## Direct eTIMS OSCU integration (separate from the catalog)
 
-The catalog entry `etims-oscu-integrator-automated-testing` must use its exact GavaConnect path, method, scope and payload from the authenticated developer-portal specification. Direct OSCU/VSCU device-protocol integration is separate: it uses KRA's OSCU API, device activation/communication-key flow, sandbox and certification process. Do not forward a GavaConnect bearer token to the OSCU host or treat the catalog testing operation as certification. KRA requires sandbox development/testing and certification before live third-party or self-integrated use. See the official [OSCU specification](https://www.kra.go.ke/images/publications/OSCU_Specification_Document_v2.0.pdf), [OSCU/VSCU sign-up guide](https://kra.go.ke/images/publications/OSCU_VSCU_Step-by-Step_Guide-on-how-to-sign-up.pdf), and [KRA system-to-system integration guidance](https://www.kra.go.ke/services/service/16).
+A supplied Postman collection now documents a separate direct OSCU sandbox endpoint inventory: [`contracts/etims-oscu-direct.endpoints.json`](../contracts/etims-oscu-direct.endpoints.json), with notes in [the direct OSCU integration guide](etims-oscu-direct-integration.md). It contains 23 POST operations under `https://sbx.kra.go.ke/etims-oscu/api/v1`. This is **contract capture only**: no direct-OSCU runtime adapter, response schemas, sandbox execution or certification has been completed.
+
+Do not populate the GavaConnect catalog service mapping with direct OSCU paths. The two systems have separate base URLs, authentication contexts and operational lifecycles. Never forward a GavaConnect bearer token to the direct OSCU host.
+
+The direct OSCU collection contains sample-quality issues that must be resolved before use, including invalid JSON comments and the malformed sales property `isr ccCd`. Confirm these with KRA rather than silently correcting them.
+
+KRA's direct OSCU/VSCU device-protocol integration requires its own sandbox testing and certification. See the official [OSCU specification](https://www.kra.go.ke/images/publications/OSCU_Specification_Document_v2.0.pdf), [OSCU/VSCU sign-up guide](https://kra.go.ke/images/publications/OSCU_VSCU_Step-by-Step_Guide-on-how-to-sign-up.pdf), and [KRA system-to-system integration guidance](https://www.kra.go.ke/services/service/16).
