@@ -27,10 +27,10 @@ A release may be marked production-ready only when every gate below has recorded
 - A mock lookup is not a real KRA API call. Mock mode deliberately returns 501 for unimplemented catalog services rather than fabricating successful filing, PRN or certificate responses.
 - A green local test is not KRA certification or production approval.
 - The exact upstream path, HTTP method, scope, request fields, response fields, not-found codes and authentication behavior for each of the 22 services must be confirmed against current official KRA specifications and sandbox.
-- In-memory caches and rate limiters do not coordinate across replicas. Same-process idempotency is not durable across restarts and does not prevent cross-replica duplicate submissions.
+- The Python FastAPI API now supports Redis-backed distributed rate limiting and durable idempotency reservations. Completed responses are Fernet-encrypted in Redis; production requires a TLS `rediss://` URL and a valid `IDEMPOTENCY_ENCRYPTION_KEY`. The in-memory fallback is local development/test only. The separate language GavaConnect server templates still use process-local caches/limiters and require shared gateway/state coordination before horizontal scaling.
 - The PHP CLI Dockerfile uses PHP's built-in development server; production requires PHP-FPM behind a hardened web server or ingress.
 - PHP's local file locks do not coordinate across multiple hosts or containers.
-- Catalog idempotency caches are process-local in most runtimes and are not a durable distributed idempotency store. Use shared durable storage before production use of filings, PRN generation or other mutating operations.
+- Catalog idempotency is durable and cross-worker in the Python FastAPI service when Redis is configured. The separate Go/Java/JavaScript/TypeScript/PHP/Ruby GavaConnect server templates still have process-local or file-local idempotency behavior and are not ready for multi-replica mutating workloads.
 - A PIN lookup result is not identity proof, tax compliance proof or a Tax Compliance Certificate.
 
 ## Required sign-off record
