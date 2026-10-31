@@ -1,0 +1,3 @@
+# Security
+
+Keep consumer keys/secrets server-side in a secret manager; never commit them or embed them in browsers/mobile apps. Require TLS, strong high-entropy proxy keys, rotation, consent, request-size limits and upstream timeouts. Never log full PINs, national IDs, access tokens, secrets or raw upstream payloads. Separate sandbox/production credentials. Mock mode must not run in production. In-memory token caches and rate limiters are per-process; use Redis or gateway enforcement across replicas. A PIN match is not identity proof or a Tax Compliance Certificate. Complete legal/privacy review and applicable Data Protection Act obligations before real personal-data processing. Production access requires KRA approval; mock tests do not prove KRA connectivity.
