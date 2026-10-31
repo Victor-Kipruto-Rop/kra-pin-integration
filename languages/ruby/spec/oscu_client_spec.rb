@@ -44,8 +44,6 @@ RSpec.describe KraPin::DirectOscuClient do
     expect(calls[1][0]).to eq('https://sbx.kra.go.ke/etims-oscu/api/v1/branchList')
     expect(calls[1][1]['Authorization']).to eq('Bearer token')
   end
-end
-
 
   it 'marks mutating server errors and malformed responses as unknown outcomes' do
     [
@@ -70,3 +68,5 @@ end
       }
     end
   end
+
+end
