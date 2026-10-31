@@ -60,7 +60,7 @@ Example shape only — the values below are placeholders, not real KRA paths:
 
 An absent mapping returns HTTP 501. This is intentional: an incorrect guessed path or payload could cause a failed or unsafe filing/payment operation.
 
-For the eTIMS OSCU service, set `KRA_ETIMS_BASE_URL` to the HTTPS KRA host specified for the taxpayer's approved integration. KRA's published OSCU guide identifies `https://etims-api-sbx.kra.go.ke` for sandbox and `https://etims-api.kra.go.ke` for production. This host is separate from the general GavaConnect gateway; the endpoint path and operation payload still need to come from the current OSCU specification and approval.
+For the eTIMS OSCU service, set `KRA_ETIMS_BASE_URL` to the HTTPS KRA host specified for the taxpayer's approved integration. KRA's published OSCU guide identifies `https://etims-api-sbx.kra.go.ke` for sandbox and `https://etims-api.kra.go.ke` for production. This host is separate from the general GavaConnect gateway; the endpoint path and operation payload still need to come from the current OSCU specification and approval. KRA requires development and sandbox testing followed by review/certification before an integrator or taxpayer begins live OSCU/VSCU integration. The catalog label 'automated testing' does not itself constitute KRA certification.
 
 ## Response and safety
 
