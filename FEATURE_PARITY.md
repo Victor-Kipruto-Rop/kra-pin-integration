@@ -50,3 +50,10 @@ The following is an honest implementation inventory, not a claim that all runtim
 7. Conduct a security review and KRA sandbox verification.
 
 A successful mock response is not proof of upstream connectivity. This status file deliberately distinguishes implemented route scaffolding from verified production behavior.
+
+
+## Direct eTIMS OSCU SDK parity
+
+The direct OSCU protocol is a separate integration surface from the 22-service GavaConnect dispatcher. The feature branch now includes server-side clients in Python, Go, Java, JavaScript, TypeScript, PHP and Ruby. Each loads a packaged copy of the canonical 23-operation manifest; the contract validator checks parity for all copies and the OpenAPI document. Each client uses the fixed KRA sandbox host, HTTP Basic token acquisition, bearer authentication, required tenant context, explicit confirmation for provisionally mutating operations and no automatic mutation retries. These SDKs remain unverified against live KRA credentials and do not imply certification.
+
+The Python FastAPI adapter additionally uses Redis-backed distributed rate limiting and idempotency when configured. Completed response bodies are encrypted using the configured Fernet key. Other independent GavaConnect server implementations still require shared state/gateway enforcement before multi-replica production.
