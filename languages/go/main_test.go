@@ -27,7 +27,7 @@ func TestUnknownServiceIsNotCatalogued(t *testing.T) {
 }
 
 func TestCatalogHandlerRequiresConsentAndIdempotency(t *testing.T) {
- c:=Config{Env:"sandbox",Base:"https://sbx.kra.go.ke",Mock:true,Consent:true,APIKeys:[]string{"ci-test-key"}}
+ c:=Config{Env:"sandbox",Base:"https://sbx.kra.go.ke",Mock:true,APIKeys:[]string{"ci-test-key"}}
  limiter:=&Limiter{hits:map[string][]time.Time{}}
  handler:=serviceHandler(c,&http.Client{},limiter)
  request:=func(path,body,idem string)*httptest.ResponseRecorder{
