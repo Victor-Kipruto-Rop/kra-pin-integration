@@ -37,8 +37,7 @@ A release may be marked production-ready only when every gate below has recorded
 
 For each release, attach the commit SHA and evidence for:
 1. CI workflow run URLs and all seven runtime test results.
-2. Contract test evidence for all 22 services in all seven runtimes (renumber subsequent items accordingly).
-2. OpenAPI contract test report.
+2. Cross-runtime catalog/contract test evidence for all 22 services.
 3. KRA sandbox test report with credentials, PINs, taxpayer IDs and personal data redacted.
 4. KRA production approval reference (do not publish confidential approval documents).
 5. Security scan reports and remediation sign-off.
