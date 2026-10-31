@@ -83,3 +83,30 @@ func TestMutationTransportFailureIsMarkedUnknown(t *testing.T) {
 	apiErr, ok := err.(*OscuError)
 	if !ok || apiErr.Code != "oscu_outcome_unknown" || !apiErr.OutcomeUnknown { t.Fatalf("unexpected error: %#v", err) }
 }
+
+func TestMutationAmbiguousResponsesAreMarkedUnknown(t *testing.T) {
+	cases := []struct {
+		name string
+		status int
+		body string
+	}{
+		{name: "server error", status: 503, body: `{"error":"temporary"}`},
+		{name: "malformed success body", status: 200, body: `not-json`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			calls := 0
+			client, err := NewClient("key", "secret", "app", &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				calls++
+				status, body := 200, `{"access_token":"token","expires_in":3600}`
+				if strings.Contains(req.URL.Path, "/etims-oscu/") { status, body = tc.status, tc.body }
+				return &http.Response{StatusCode: status, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body)), Request: req}, nil
+			})})
+			if err != nil { t.Fatal(err) }
+			_, err = client.Invoke(context.Background(), "save-item", map[string]any{}, map[string]string{"tin":"P1","bhfId":"00","cmcKey":"x"}, true)
+			apiErr, ok := err.(*OscuError)
+			if !ok || apiErr.Code != "oscu_outcome_unknown" || !apiErr.OutcomeUnknown { t.Fatalf("unexpected error: %#v", err) }
+			if calls != 2 { t.Fatalf("expected token plus one operation request, got %d calls", calls) }
+		})
+	}
+}
