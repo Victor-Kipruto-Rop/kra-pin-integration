@@ -47,7 +47,7 @@ Do not retry these operations with a new idempotency key after an uncertain time
 
 ## Upstream configuration
 
-`KRA_SERVICE_PATHS_JSON` is a JSON object mapping service IDs to exact relative KRA paths. `KRA_SERVICE_METHODS_JSON` optionally maps service IDs to `POST` (must be `GET` or `POST`). Authorization is handled by the server-side OAuth client-credentials token helper.
+`KRA_SERVICE_PATHS_JSON` is a JSON object mapping service IDs to exact relative KRA paths. `KRA_SERVICE_METHODS_JSON` maps service IDs to `GET` or `POST`. GET payload fields are encoded as query parameters; POST payloads are sent as JSON. GET is rejected for catalog operations classified as mutating. The public proxy endpoint remains POST. Authorization is handled by the server-side OAuth client-credentials token helper; the access token is never returned to API callers.
 
 Example shape only — the values below are placeholders, not real KRA paths:
 
@@ -58,9 +58,9 @@ Example shape only — the values below are placeholders, not real KRA paths:
 }
 ```
 
-An absent mapping returns HTTP 501. This is intentional: an incorrect guessed path or payload could cause a failed or unsafe filing/payment operation.
+An absent mapping returns HTTP 501. A repeated idempotency key with a different canonical payload returns HTTP 409. Same-process replay protection is implemented, but distributed idempotency still requires a shared durable store. This is intentional: an incorrect guessed path or payload could cause a failed or unsafe filing/payment operation.
 
-For the eTIMS OSCU service, set `KRA_ETIMS_BASE_URL` to the HTTPS KRA host specified for the taxpayer's approved integration. KRA's published OSCU guide identifies `https://etims-api-sbx.kra.go.ke` for sandbox and `https://etims-api.kra.go.ke` for production. This host is separate from the general GavaConnect gateway; the endpoint path and operation payload still need to come from the current OSCU specification and approval. KRA requires development and sandbox testing followed by review/certification before an integrator or taxpayer begins live OSCU/VSCU integration. The catalog label 'automated testing' does not itself constitute KRA certification.
+For the eTIMS OSCU service, set `KRA_ETIMS_BASE_URL` to the exact HTTPS API base specified for the taxpayer's approved integration. KRA's OSCU specification lists `https://etims-api-sbx.kra.go.ke/etims-api/` for sandbox and `https://etims-api.kra.go.ke/etims-api/` for production; its step-by-step guide also illustrates service paths against the environment host, so use the path convention from the specification version actually assigned to the integration. This host is separate from the general GavaConnect gateway; the endpoint path and operation payload still need to come from the current OSCU specification and approval. KRA requires development and sandbox testing followed by review/certification before an integrator or taxpayer begins live OSCU/VSCU integration. The catalog label 'automated testing' does not itself constitute KRA certification.
 
 ## Response and safety
 
