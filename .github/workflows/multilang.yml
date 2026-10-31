@@ -19,7 +19,7 @@ jobs:
         with: {python-version: '3.12'}
       - run: python scripts/validate-catalog.py
       - run: python scripts/validate-oscu-contract.py
-      - run: python -m py_compile scripts/validate-catalog.py scripts/validate-oscu-contract.py scripts/validate-production-config.py scripts/summarize-junit.py scripts/run-oscu-sandbox-check.py server/app/dotenv_loader.py server/app/idempotency.py
+      - run: python -m py_compile scripts/validate-catalog.py scripts/validate-oscu-contract.py scripts/validate-production-config.py scripts/summarize-junit.py scripts/run-oscu-sandbox-check.py server/app/dotenv_loader.py server/app/idempotency.py languages/python/kra_pin_oscu.py
   python:
     runs-on: ubuntu-latest
     steps:
@@ -28,15 +28,19 @@ jobs:
         with: {python-version: '3.12', cache: pip, cache-dependency-path: server/requirements-dev.txt}
       - run: pip install -r requirements-dev.txt
         working-directory: server
+      - run: pip install -r ../languages/python/requirements.txt
+        working-directory: server
       - run: ruff check .
         working-directory: server
       - run: mkdir -p reports && PYTHONPATH=. pytest -q --junitxml=reports/python-junit.xml
+        working-directory: server
+      - run: PYTHONPATH=../languages/python pytest -q ../languages/python --junitxml=reports/python-oscu-sdk-junit.xml
         working-directory: server
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: python-junit-report
-          path: server/reports/python-junit.xml
+          path: server/reports/*.xml
           if-no-files-found: ignore
           retention-days: 14
   go:
