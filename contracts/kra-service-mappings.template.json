@@ -7,7 +7,7 @@
     "know-kra-tax-service-office": "",
     "tax-compliance-certificate-application": "",
     "tax-compliance-certificate-checker": "",
-    "vat-exemption-checker": "",
+    "vat-exemption-checker": "/dtd/checker/v1/vatexemption",
     "it-exemption-checker": "",
     "nil-return-filing": "",
     "tot-return-filing": "",
