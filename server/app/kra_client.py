@@ -163,9 +163,9 @@ class KraClient:
             raise KraError(501, "method_not_supported", "Only GET and POST are supported by the adapter")
         if method == "GET" and service_id in {"tax-compliance-certificate-application", "nil-return-filing", "tot-return-filing", "income-tax-withholding-prn-generation", "vat-withholding-prn-generation", "rental-withholding-prn-generation", "etims-oscu-integrator-automated-testing"}:
             raise KraError(501, "unsafe_http_method", "Mutating catalog services cannot use GET")
+        # All 22 catalog routes use the configured GavaConnect base URL.
+        # Direct OSCU protocol traffic requires a separate certified adapter.
         upstream_base = self._s.base_url
-        if service_id == "etims-oscu-integrator-automated-testing":
-            upstream_base = os.environ.get("KRA_ETIMS_BASE_URL", "")
         parsed = urlparse(upstream_base)
         if parsed.scheme != "https" or not parsed.hostname or not parsed.hostname.endswith(".kra.go.ke"):
             raise KraError(501, "service_base_not_configured", "Set a verified HTTPS KRA base URL for this service")
