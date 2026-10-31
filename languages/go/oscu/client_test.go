@@ -2,6 +2,7 @@ package oscu
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -51,4 +52,34 @@ func TestReadOnlyOperationUsesFixedSandboxHostAndBearerToken(t *testing.T) {
 	got, err := client.Invoke(context.Background(), "branch-list", map[string]any{}, map[string]string{"tin":"P123","bhfId":"00","cmcKey":"secret"}, false)
 	if err != nil { t.Fatal(err) }
 	if string(got) != `{"ok":true}` { t.Fatalf("unexpected response: %s", got) }
+}
+
+func TestReadOnlyTransportFailureIsNotMarkedUnknownMutation(t *testing.T) {
+	calls := 0
+	client, err := NewClient("key", "secret", "app", &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		calls++
+		if calls == 1 {
+			return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"access_token":"token","expires_in":3600}`)), Request: req}, nil
+		}
+		return nil, errors.New("simulated transport failure")
+	})})
+	if err != nil { t.Fatal(err) }
+	_, err = client.Invoke(context.Background(), "branch-list", map[string]any{}, map[string]string{"tin":"P1","bhfId":"00","cmcKey":"x"}, false)
+	apiErr, ok := err.(*OscuError)
+	if !ok || apiErr.Code != "oscu_upstream_unreachable" || apiErr.OutcomeUnknown { t.Fatalf("unexpected error: %#v", err) }
+}
+
+func TestMutationTransportFailureIsMarkedUnknown(t *testing.T) {
+	calls := 0
+	client, err := NewClient("key", "secret", "app", &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		calls++
+		if calls == 1 {
+			return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"access_token":"token","expires_in":3600}`)), Request: req}, nil
+		}
+		return nil, errors.New("simulated transport failure")
+	})})
+	if err != nil { t.Fatal(err) }
+	_, err = client.Invoke(context.Background(), "save-item", map[string]any{}, map[string]string{"tin":"P1","bhfId":"00","cmcKey":"x"}, true)
+	apiErr, ok := err.(*OscuError)
+	if !ok || apiErr.Code != "oscu_outcome_unknown" || !apiErr.OutcomeUnknown { t.Fatalf("unexpected error: %#v", err) }
 }
