@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Validate that all seven runtimes declare every canonical KRA service ID."""
 import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,4 +25,19 @@ for language, relative_path in runtime_files.items():
     missing = [service_id for service_id in ids if service_id not in source]
     assert not missing, f"{language} is missing catalog IDs: {missing}"
 
-print(f"Validated {len(ids)} KRA services across {len(runtime_files)} runtimes.")
+mapping = json.loads((ROOT / "contracts/kra-service-mappings.template.json").read_text(encoding="utf-8"))
+expected_mapping_ids = set(ids) - {"authorization"}
+assert set(mapping["paths"]) == expected_mapping_ids, "Mapping template must enumerate every non-authorization service"
+assert set(mapping["methods"]) == expected_mapping_ids, "Method template must enumerate every non-authorization service"
+assert all(value == "" for value in mapping["paths"].values()), "Unverified upstream paths must remain blank"
+assert all(value == "POST" for value in mapping["methods"].values()), "POST values are placeholders; review before enabling"
+
+openapi = (ROOT / "contracts/openapi.yaml").read_text(encoding="utf-8")
+for service_id in ids:
+    assert f"              - {service_id}" in openapi, f"OpenAPI enum is missing {service_id}"
+
+status_doc = (ROOT / "docs/kra-service-contract-status.md").read_text(encoding="utf-8")
+for service_id in ids:
+    assert f"`{service_id}`" in status_doc, f"Service status document is missing {service_id}"
+
+print(f"Validated {len(ids)} unique services, {len(expected_mapping_ids)} explicit upstream mapping slots, OpenAPI parity, and {len(runtime_files)} runtime registrations.")
