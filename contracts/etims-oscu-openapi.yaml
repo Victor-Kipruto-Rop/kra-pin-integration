@@ -1,0 +1,798 @@
+openapi: 3.1.0
+info:
+  title: KRA Direct eTIMS OSCU Sandbox API
+  version: 1.0.0
+  description: >
+    Sandbox-only contract transcribed from the supplied Postman collection.
+    Request and response schemas are intentionally generic until KRA supplies
+    formal specifications. This is not a KRA certification statement.
+servers:
+  - url: https://sbx.kra.go.ke/etims-oscu/api/v1
+    description: KRA sandbox only
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    Tin:
+      name: tin
+      in: header
+      required: true
+      schema: { type: string }
+    BranchId:
+      name: bhfId
+      in: header
+      required: true
+      schema: { type: string }
+    CmcKey:
+      name: cmcKey
+      in: header
+      required: true
+      schema: { type: string }
+    AppId:
+      name: apigee_app_id
+      in: header
+      required: true
+      schema: { type: string }
+paths:
+  /branchInsuranceInfo:
+    post:
+      operationId: branch-insurance-information
+      summary: branch insurance information
+      description: >
+        fields transcribed from supplied Postman example; formal validation schema pending. Response schema: not supplied.
+        Mutation classification is provisional and must be confirmed by KRA.
+      x-kra-mutates: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Tin'
+        - $ref: '#/components/parameters/BranchId'
+        - $ref: '#/components/parameters/CmcKey'
+        - $ref: '#/components/parameters/AppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Formal field-level schema not supplied by KRA.
+      responses:
+        '200':
+          description: Successful KRA response; response schema not supplied.
+          content:
+            application/json:
+              schema: {}
+        '4XX':
+          description: KRA rejected the request.
+        '5XX':
+          description: Upstream service error; mutation outcome may require reconciliation.
+  /branchUserAccount:
+    post:
+      operationId: branch-user-account
+      summary: branch user account
+      description: >
+        fields transcribed from supplied Postman example; formal validation schema pending. Response schema: not supplied.
+        Mutation classification is provisional and must be confirmed by KRA.
+      x-kra-mutates: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Tin'
+        - $ref: '#/components/parameters/BranchId'
+        - $ref: '#/components/parameters/CmcKey'
+        - $ref: '#/components/parameters/AppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Formal field-level schema not supplied by KRA.
+      responses:
+        '200':
+          description: Successful KRA response; response schema not supplied.
+          content:
+            application/json:
+              schema: {}
+        '4XX':
+          description: KRA rejected the request.
+        '5XX':
+          description: Upstream service error; mutation outcome may require reconciliation.
+  /branchSendCustomerInfo:
+    post:
+      operationId: branch-send-customer-information
+      summary: branch send customer information
+      description: >
+        fields transcribed from supplied Postman example; formal validation schema pending. Response schema: not supplied.
+        Mutation classification is provisional and must be confirmed by KRA.
+      x-kra-mutates: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Tin'
+        - $ref: '#/components/parameters/BranchId'
+        - $ref: '#/components/parameters/CmcKey'
+        - $ref: '#/components/parameters/AppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Formal field-level schema not supplied by KRA.
+      responses:
+        '200':
+          description: Successful KRA response; response schema not supplied.
+          content:
+            application/json:
+              schema: {}
+        '4XX':
+          description: KRA rejected the request.
+        '5XX':
+          description: Upstream service error; mutation outcome may require reconciliation.
+  /branchList:
+    post:
+      operationId: branch-list
+      summary: branch list
+      description: >
+        fields transcribed from supplied Postman example; formal validation schema pending. Response schema: not supplied.
+        Mutation classification is provisional and must be confirmed by KRA.
+      x-kra-mutates: false
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Tin'
+        - $ref: '#/components/parameters/BranchId'
+        - $ref: '#/components/parameters/CmcKey'
+        - $ref: '#/components/parameters/AppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Formal field-level schema not supplied by KRA.
+      responses:
+        '200':
+          description: Successful KRA response; response schema not supplied.
+          content:
+            application/json:
+              schema: {}
+        '4XX':
+          description: KRA rejected the request.
+        '5XX':
+          description: Upstream service error; mutation outcome may require reconciliation.
+  /selectCodeList:
+    post:
+      operationId: select-code-list
+      summary: select code list
+      description: >
+        fields transcribed from supplied Postman example; formal validation schema pending. Response schema: not supplied.
+        Mutation classification is provisional and must be confirmed by KRA.
+      x-kra-mutates: false
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Tin'
+        - $ref: '#/components/parameters/BranchId'
+        - $ref: '#/components/parameters/CmcKey'
+        - $ref: '#/components/parameters/AppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Formal field-level schema not supplied by KRA.
+      responses:
+        '200':
+          description: Successful KRA response; response schema not supplied.
+          content:
+            application/json:
+              schema: {}
+        '4XX':
+          description: KRA rejected the request.
+        '5XX':
+          description: Upstream service error; mutation outcome may require reconciliation.
+  /customerPinInfo:
+    post:
+      operationId: customer-pin-info
+      summary: customer pin info
+      description: >
+        fields transcribed from supplied Postman example; formal validation schema pending. Response schema: not supplied.
+        Mutation classification is provisional and must be confirmed by KRA.
+      x-kra-mutates: false
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Tin'
+        - $ref: '#/components/parameters/BranchId'
+        - $ref: '#/components/parameters/CmcKey'
+        - $ref: '#/components/parameters/AppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Formal field-level schema not supplied by KRA.
+      responses:
+        '200':
+          description: Successful KRA response; response schema not supplied.
+          content:
+            application/json:
+              schema: {}
+        '4XX':
+          description: KRA rejected the request.
+        '5XX':
+          description: Upstream service error; mutation outcome may require reconciliation.
+  /selectItemClass:
+    post:
+      operationId: select-item-classification
+      summary: select item classification
+      description: >
+        fields transcribed from supplied Postman example; formal validation schema pending. Response schema: not supplied.
+        Mutation classification is provisional and must be confirmed by KRA.
+      x-kra-mutates: false
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Tin'
+        - $ref: '#/components/parameters/BranchId'
+        - $ref: '#/components/parameters/CmcKey'
+        - $ref: '#/components/parameters/AppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Formal field-level schema not supplied by KRA.
+      responses:
+        '200':
+          description: Successful KRA response; response schema not supplied.
+          content:
+            application/json:
+              schema: {}
+        '4XX':
+          description: KRA rejected the request.
+        '5XX':
+          description: Upstream service error; mutation outcome may require reconciliation.
+  /selectTaxpayerInfo:
+    post:
+      operationId: select-taxpayer-information
+      summary: select taxpayer information
+      description: >
+        fields transcribed from supplied Postman example; formal validation schema pending. Response schema: not supplied.
+        Mutation classification is provisional and must be confirmed by KRA.
+      x-kra-mutates: false
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Tin'
+        - $ref: '#/components/parameters/BranchId'
+        - $ref: '#/components/parameters/CmcKey'
+        - $ref: '#/components/parameters/AppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Formal field-level schema not supplied by KRA.
+      responses:
+        '200':
+          description: Successful KRA response; response schema not supplied.
+          content:
+            application/json:
+              schema: {}
+        '4XX':
+          description: KRA rejected the request.
+        '5XX':
+          description: Upstream service error; mutation outcome may require reconciliation.
+  /selectNoticeList:
+    post:
+      operationId: select-notice-list
+      summary: select notice list
+      description: >
+        fields transcribed from supplied Postman example; formal validation schema pending. Response schema: not supplied.
+        Mutation classification is provisional and must be confirmed by KRA.
+      x-kra-mutates: false
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Tin'
+        - $ref: '#/components/parameters/BranchId'
+        - $ref: '#/components/parameters/CmcKey'
+        - $ref: '#/components/parameters/AppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Formal field-level schema not supplied by KRA.
+      responses:
+        '200':
+          description: Successful KRA response; response schema not supplied.
+          content:
+            application/json:
+              schema: {}
+        '4XX':
+          description: KRA rejected the request.
+        '5XX':
+          description: Upstream service error; mutation outcome may require reconciliation.
+  /importedItemInfo:
+    post:
+      operationId: imported-item-information
+      summary: imported item information
+      description: >
+        fields transcribed from supplied Postman example; formal validation schema pending. Response schema: not supplied.
+        Mutation classification is provisional and must be confirmed by KRA.
+      x-kra-mutates: false
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Tin'
+        - $ref: '#/components/parameters/BranchId'
+        - $ref: '#/components/parameters/CmcKey'
+        - $ref: '#/components/parameters/AppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Formal field-level schema not supplied by KRA.
+      responses:
+        '200':
+          description: Successful KRA response; response schema not supplied.
+          content:
+            application/json:
+              schema: {}
+        '4XX':
+          description: KRA rejected the request.
+        '5XX':
+          description: Upstream service error; mutation outcome may require reconciliation.
+  /importedItemConvertedInfo:
+    post:
+      operationId: imported-item-converted-information
+      summary: imported item converted information
+      description: >
+        fields transcribed from supplied Postman example; formal validation schema pending. Response schema: not supplied.
+        Mutation classification is provisional and must be confirmed by KRA.
+      x-kra-mutates: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Tin'
+        - $ref: '#/components/parameters/BranchId'
+        - $ref: '#/components/parameters/CmcKey'
+        - $ref: '#/components/parameters/AppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Formal field-level schema not supplied by KRA.
+      responses:
+        '200':
+          description: Successful KRA response; response schema not supplied.
+          content:
+            application/json:
+              schema: {}
+        '4XX':
+          description: KRA rejected the request.
+        '5XX':
+          description: Upstream service error; mutation outcome may require reconciliation.
+  /initialize:
+    post:
+      operationId: oscu-initialization
+      summary: oscu initialization
+      description: >
+        fields transcribed from supplied Postman example; formal validation schema pending. Response schema: not supplied.
+        Mutation classification is provisional and must be confirmed by KRA.
+      x-kra-mutates: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Formal field-level schema not supplied by KRA.
+      responses:
+        '200':
+          description: Successful KRA response; response schema not supplied.
+          content:
+            application/json:
+              schema: {}
+        '4XX':
+          description: KRA rejected the request.
+        '5XX':
+          description: Upstream service error; mutation outcome may require reconciliation.
+  /itemInfo:
+    post:
+      operationId: item-information
+      summary: item information
+      description: >
+        fields transcribed from supplied Postman example; formal validation schema pending. Response schema: not supplied.
+        Mutation classification is provisional and must be confirmed by KRA.
+      x-kra-mutates: false
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Tin'
+        - $ref: '#/components/parameters/BranchId'
+        - $ref: '#/components/parameters/CmcKey'
+        - $ref: '#/components/parameters/AppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Formal field-level schema not supplied by KRA.
+      responses:
+        '200':
+          description: Successful KRA response; response schema not supplied.
+          content:
+            application/json:
+              schema: {}
+        '4XX':
+          description: KRA rejected the request.
+        '5XX':
+          description: Upstream service error; mutation outcome may require reconciliation.
+  /saveItemComposition:
+    post:
+      operationId: save-item-composition
+      summary: save item composition
+      description: >
+        fields transcribed from supplied Postman example; formal validation schema pending. Response schema: not supplied.
+        Mutation classification is provisional and must be confirmed by KRA.
+      x-kra-mutates: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Tin'
+        - $ref: '#/components/parameters/BranchId'
+        - $ref: '#/components/parameters/CmcKey'
+        - $ref: '#/components/parameters/AppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Formal field-level schema not supplied by KRA.
+      responses:
+        '200':
+          description: Successful KRA response; response schema not supplied.
+          content:
+            application/json:
+              schema: {}
+        '4XX':
+          description: KRA rejected the request.
+        '5XX':
+          description: Upstream service error; mutation outcome may require reconciliation.
+  /saveItem:
+    post:
+      operationId: save-item
+      summary: save item
+      description: >
+        fields transcribed from supplied Postman example; formal validation schema pending. Response schema: not supplied.
+        Mutation classification is provisional and must be confirmed by KRA.
+      x-kra-mutates: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Tin'
+        - $ref: '#/components/parameters/BranchId'
+        - $ref: '#/components/parameters/CmcKey'
+        - $ref: '#/components/parameters/AppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Formal field-level schema not supplied by KRA.
+      responses:
+        '200':
+          description: Successful KRA response; response schema not supplied.
+          content:
+            application/json:
+              schema: {}
+        '4XX':
+          description: KRA rejected the request.
+        '5XX':
+          description: Upstream service error; mutation outcome may require reconciliation.
+  /getPurchaseTransactionInfo:
+    post:
+      operationId: get-purchase-transaction-information
+      summary: get purchase transaction information
+      description: >
+        fields transcribed from supplied Postman example; formal validation schema pending. Response schema: not supplied.
+        Mutation classification is provisional and must be confirmed by KRA.
+      x-kra-mutates: false
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Tin'
+        - $ref: '#/components/parameters/BranchId'
+        - $ref: '#/components/parameters/CmcKey'
+        - $ref: '#/components/parameters/AppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Formal field-level schema not supplied by KRA.
+      responses:
+        '200':
+          description: Successful KRA response; response schema not supplied.
+          content:
+            application/json:
+              schema: {}
+        '4XX':
+          description: KRA rejected the request.
+        '5XX':
+          description: Upstream service error; mutation outcome may require reconciliation.
+  /sendPurchaseTransactionInfo:
+    post:
+      operationId: send-purchase-transaction-information
+      summary: send purchase transaction information
+      description: >
+        fields transcribed from supplied Postman example; formal validation schema pending. Response schema: not supplied.
+        Mutation classification is provisional and must be confirmed by KRA.
+      x-kra-mutates: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Tin'
+        - $ref: '#/components/parameters/BranchId'
+        - $ref: '#/components/parameters/CmcKey'
+        - $ref: '#/components/parameters/AppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Formal field-level schema not supplied by KRA.
+      responses:
+        '200':
+          description: Successful KRA response; response schema not supplied.
+          content:
+            application/json:
+              schema: {}
+        '4XX':
+          description: KRA rejected the request.
+        '5XX':
+          description: Upstream service error; mutation outcome may require reconciliation.
+  /sendSalesTransaction:
+    post:
+      operationId: send-sales-transaction
+      summary: send sales transaction
+      description: >
+        fields transcribed from supplied Postman example; formal validation schema pending. Response schema: not supplied.
+        Mutation classification is provisional and must be confirmed by KRA.
+      x-kra-mutates: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Tin'
+        - $ref: '#/components/parameters/BranchId'
+        - $ref: '#/components/parameters/CmcKey'
+        - $ref: '#/components/parameters/AppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Formal field-level schema not supplied by KRA.
+      responses:
+        '200':
+          description: Successful KRA response; response schema not supplied.
+          content:
+            application/json:
+              schema: {}
+        '4XX':
+          description: KRA rejected the request.
+        '5XX':
+          description: Upstream service error; mutation outcome may require reconciliation.
+  /selectInvoiceDetail:
+    post:
+      operationId: select-invoice-detail
+      summary: select invoice detail
+      description: >
+        fields transcribed from supplied Postman example; formal validation schema pending. Response schema: not supplied.
+        Mutation classification is provisional and must be confirmed by KRA.
+      x-kra-mutates: false
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Tin'
+        - $ref: '#/components/parameters/BranchId'
+        - $ref: '#/components/parameters/CmcKey'
+        - $ref: '#/components/parameters/AppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Formal field-level schema not supplied by KRA.
+      responses:
+        '200':
+          description: Successful KRA response; response schema not supplied.
+          content:
+            application/json:
+              schema: {}
+        '4XX':
+          description: KRA rejected the request.
+        '5XX':
+          description: Upstream service error; mutation outcome may require reconciliation.
+  /selectSalesTransactions:
+    post:
+      operationId: select-sales-transactions
+      summary: select sales transactions
+      description: >
+        fields transcribed from supplied Postman example; formal validation schema pending. Response schema: not supplied.
+        Mutation classification is provisional and must be confirmed by KRA.
+      x-kra-mutates: false
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Tin'
+        - $ref: '#/components/parameters/BranchId'
+        - $ref: '#/components/parameters/CmcKey'
+        - $ref: '#/components/parameters/AppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Formal field-level schema not supplied by KRA.
+      responses:
+        '200':
+          description: Successful KRA response; response schema not supplied.
+          content:
+            application/json:
+              schema: {}
+        '4XX':
+          description: KRA rejected the request.
+        '5XX':
+          description: Upstream service error; mutation outcome may require reconciliation.
+  /insert/stockIO:
+    post:
+      operationId: insert-stock-io
+      summary: insert stock io
+      description: >
+        fields transcribed from supplied Postman example; formal validation schema pending. Response schema: not supplied.
+        Mutation classification is provisional and must be confirmed by KRA.
+      x-kra-mutates: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Tin'
+        - $ref: '#/components/parameters/BranchId'
+        - $ref: '#/components/parameters/CmcKey'
+        - $ref: '#/components/parameters/AppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Formal field-level schema not supplied by KRA.
+      responses:
+        '200':
+          description: Successful KRA response; response schema not supplied.
+          content:
+            application/json:
+              schema: {}
+        '4XX':
+          description: KRA rejected the request.
+        '5XX':
+          description: Upstream service error; mutation outcome may require reconciliation.
+  /save/stockMaster:
+    post:
+      operationId: save-stock-master
+      summary: save stock master
+      description: >
+        fields transcribed from supplied Postman example; formal validation schema pending. Response schema: not supplied.
+        Mutation classification is provisional and must be confirmed by KRA.
+      x-kra-mutates: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Tin'
+        - $ref: '#/components/parameters/BranchId'
+        - $ref: '#/components/parameters/CmcKey'
+        - $ref: '#/components/parameters/AppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Formal field-level schema not supplied by KRA.
+      responses:
+        '200':
+          description: Successful KRA response; response schema not supplied.
+          content:
+            application/json:
+              schema: {}
+        '4XX':
+          description: KRA rejected the request.
+        '5XX':
+          description: Upstream service error; mutation outcome may require reconciliation.
+  /selectStockMoveLists:
+    post:
+      operationId: select-stock-move-lists
+      summary: select stock move lists
+      description: >
+        fields transcribed from supplied Postman example; formal validation schema pending. Response schema: not supplied.
+        Mutation classification is provisional and must be confirmed by KRA.
+      x-kra-mutates: false
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Tin'
+        - $ref: '#/components/parameters/BranchId'
+        - $ref: '#/components/parameters/CmcKey'
+        - $ref: '#/components/parameters/AppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              description: Formal field-level schema not supplied by KRA.
+      responses:
+        '200':
+          description: Successful KRA response; response schema not supplied.
+          content:
+            application/json:
+              schema: {}
+        '4XX':
+          description: KRA rejected the request.
+        '5XX':
+          description: Upstream service error; mutation outcome may require reconciliation.
+
+# Token acquisition is separate from these resource operations:
+# GET https://sbx.kra.go.ke/v1/token/generate?grant_type=client_credentials
+# Use HTTP Basic credentials to obtain a bearer token; never expose secrets to browsers.
