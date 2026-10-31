@@ -95,7 +95,7 @@ final class DirectOscuClient
         foreach ($headers as $name => $value) $headerLines[] = $name . ': ' . $value;
         curl_setopt_array($curl, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CUSTOMREQUEST => 'GET' if ($body === null) else 'POST',
+            CURLOPT_CUSTOMREQUEST => ($body === null ? 'GET' : 'POST'),
             CURLOPT_HTTPHEADER => $headerLines,
             CURLOPT_CONNECTTIMEOUT => min(10, $this->timeoutSeconds),
             CURLOPT_TIMEOUT => $this->timeoutSeconds,
