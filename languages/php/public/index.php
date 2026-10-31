@@ -3,6 +3,8 @@ declare(strict_types=1);
 require __DIR__.'/../src/KraService.php';
 header('Content-Type: application/json');
 $env=getenv('KRA_ENVIRONMENT')?:'sandbox';$mock=(getenv('KRA_MOCK')?:'true')==='true';
+if(!in_array($env,['sandbox','production'],true)){http_response_code(500);echo json_encode(['error'=>'KRA_ENVIRONMENT must be sandbox or production']);exit;}
+if(!$mock&&(!(getenv('KRA_PIN_CONSUMER_KEY')?:'')||!(getenv('KRA_PIN_CONSUMER_SECRET')?:''))){http_response_code(500);echo json_encode(['error'=>'KRA credentials required when mock mode is disabled']);exit;}
 if($mock&&$env==='production'){http_response_code(500);echo json_encode(['error'=>'Mock mode forbidden in production']);exit;}
 $keys=array_values(array_filter(array_map('trim',explode(',',getenv('PROXY_API_KEYS')?:''))));if(!$keys){http_response_code(500);echo json_encode(['error'=>'PROXY_API_KEYS required']);exit;}
 $path=parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH);
