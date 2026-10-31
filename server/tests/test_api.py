@@ -296,3 +296,60 @@ def test_definitive_upstream_rejection_releases_mutation_reservation():
         )
     assert first.status_code == second.status_code == 422
     assert fake.calls == 2
+
+
+def test_mutating_catalog_operation_does_not_replay_after_401():
+    class CatalogClient:
+        def __init__(self):
+            self.retry_auth = None
+
+        async def invoke_catalog_service(self, service_id, payload, retry_auth=True):
+            self.retry_auth = retry_auth
+            return {"accepted": True}
+
+        async def aclose(self):
+            return None
+
+    fake = CatalogClient()
+    app = create_app(
+        Settings(mock=False, proxy_api_keys=("test-key",), pin_key="consumer", pin_secret="secret"),
+        client=fake,
+    )
+    with TestClient(app) as c:
+        response = c.post(
+            "/v1/kra/nil-return-filing",
+            json={"consent": True, "payload": {"period": "2026"}},
+            headers={**KEY, "Idempotency-Key": "no-auth-replay-0001"},
+        )
+    assert response.status_code == 200
+    assert fake.retry_auth is False
+
+
+def test_mutating_direct_oscu_operation_does_not_replay_after_401():
+    class OscuClient:
+        def __init__(self):
+            self.retry_auth = None
+
+        def operation(self, operation_id):
+            return {"id": operation_id, "mutates": True}
+
+        async def invoke(self, operation_id, payload, tenant_headers, retry_auth=True):
+            self.retry_auth = retry_auth
+            return {"operation": operation_id, "data": {"accepted": True}}
+
+        async def aclose(self):
+            return None
+
+    fake = OscuClient()
+    app = create_app(
+        Settings(mock=False, proxy_api_keys=("test-key",), pin_key="consumer", pin_secret="secret"),
+        oscu_client=fake,
+    )
+    with TestClient(app) as c:
+        response = c.post(
+            "/v1/etims/oscu/mutating-operation",
+            json={"consent": True, "payload": {"invoice": "test"}},
+            headers={**KEY, "Idempotency-Key": "no-oscu-auth-replay-0001"},
+        )
+    assert response.status_code == 200
+    assert fake.retry_auth is False
