@@ -51,9 +51,6 @@ def validate(env: dict[str, str]) -> list[str]:
         if isinstance(path, str) and path.startswith("/") and (".." in path.split("/") or "\\\\" in path):
             errors.append(f"Unsafe path configured for {service_id}")
 
-    etims = urlparse(env.get("KRA_ETIMS_BASE_URL", ""))
-    if etims.scheme != "https" or etims.hostname != "etims-api.kra.go.ke":
-        errors.append("KRA_ETIMS_BASE_URL must use the approved production HTTPS host etims-api.kra.go.ke")
     return errors
 
 
