@@ -50,7 +50,7 @@ def create_app(settings: Settings | None = None, client=None, oscu_client=None) 
             CORSMiddleware,
             allow_origins=list(settings.cors_origins),
             allow_methods=["GET", "POST"],
-            allow_headers=["X-API-Key", "Content-Type"],
+            allow_headers=["X-API-Key", "Content-Type", "Idempotency-Key", "X-ETIMS-TIN", "X-ETIMS-BHF-ID", "X-ETIMS-CMC-KEY"],
         )
 
     async def guard(request: Request, x_api_key: str | None = Header(default=None)) -> str:
