@@ -1,9 +1,9 @@
-# KRA PIN Integration — Multi-language templates
+# KRA GavaConnect Integration — Seven-language templates
 
 > **Release status: NOT PRODUCTION READY — validation required.** See [Production Readiness](PRODUCTION_READINESS.md) for release gates and evidence requirements.
 
 
-Unofficial, server-side integration templates for verifying KRA PINs through the official GavaConnect developer gateway ([developer.go.ke](https://developer.go.ke)). This project is community software and is not affiliated with or endorsed by the Kenya Revenue Authority. It never scrapes iTax. Check current KRA terms and API documentation before going live.
+Unofficial, server-side integration templates for the 22 KRA developer-catalog services through approved GavaConnect and eTIMS integrations ([developer.go.ke](https://developer.go.ke)). This project is community software and is not affiliated with or endorsed by the Kenya Revenue Authority. It never scrapes iTax. Check current KRA terms and API documentation before going live.
 
 ## Supported server implementations
 
@@ -24,8 +24,9 @@ Every language is an independent server application and calls KRA directly. The 
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/health` | Health and environment |
-| POST | `/v1/pin/verify` | Verify PIN |
-| POST | `/v1/pin/verify-by-id` | Lookup PIN by taxpayer ID |
+| POST | `/v1/kra/{service-id}` | Invoke any of the 22 catalog services |
+| POST | `/v1/pin/verify` | Legacy PIN verification route |
+| POST | `/v1/pin/verify-by-id` | Legacy PIN-by-ID route |
 
 Protected routes require `X-API-Key` and `consent: true` by default. Success response shape:
 
@@ -55,6 +56,63 @@ Start with one implementation at a time. Set `KRA_MOCK=true` and a non-empty `PR
 
 Copy each language's `.env.example` to `.env` or export variables in your shell/deployment secret manager. Never commit real credentials.
 
+## Complete 22-service catalog
+
+Stable proxy IDs and operation classes are defined in contracts/kra-services.json.
+
+| # | KRA service | Proxy service ID | Operation |
+|---:|---|---|---|
+| 1 | Authorization | authorization | Authentication |
+| 2 | PIN Checker by PIN | pin-checker-by-pin | Read |
+| 3 | PIN Checker BY ID | pin-checker-by-id | Read |
+| 4 | Fetch Taxpayer Obligations | fetch-taxpayer-obligations | Read |
+| 5 | Know KRA Tax Service Office | know-kra-tax-service-office | Read |
+| 6 | Tax Compliance Certificate Application | tax-compliance-certificate-application | Mutating |
+| 7 | Tax Compliance Certificate Checker | tax-compliance-certificate-checker | Read |
+| 8 | VAT Exemption Checker | vat-exemption-checker | Read |
+| 9 | IT Exemption checker | it-exemption-checker | Read |
+| 10 | NIL Return Filling | nil-return-filing | Mutating |
+| 11 | TOT Return Filing | tot-return-filing | Mutating |
+| 12 | Income Tax Withholding PRN Generation | income-tax-withholding-prn-generation | Mutating |
+| 13 | VAT Withholding PRN Generation | vat-withholding-prn-generation | Mutating |
+| 14 | Rental Withholding PRN Generation | rental-withholding-prn-generation | Mutating |
+| 15 | Excise License Checker By Pin | excise-license-checker-by-pin | Read |
+| 16 | Excise License Checker By Certificate Number | excise-license-checker-by-certificate-number | Read |
+| 17 | Customs Declaration Status Checker | customs-declaration-status-checker | Read |
+| 18 | Customs Tax Calculator | customs-tax-calculator | Read/calculation |
+| 19 | Import Certificate Checker by PIN | import-certificate-checker-by-pin | Read |
+| 20 | Import Certificate Checker by Cert Number | import-certificate-checker-by-cert-number | Read |
+| 21 | Invoice Checker | invoice-checker | Read |
+| 22 | eTIMS OSCU Integrator Automated Testing | etims-oscu-integrator-automated-testing | Test/integration |
+
+### Unified invocation contract
+
+Every language exposes POST /v1/kra/{service-id}, protected by X-API-Key:
+
+```json
+{
+  "consent": true,
+  "payload": {"service-specific": "fields come from the official KRA specification"}
+}
+```
+
+Mutating operations (TCC application, NIL/TOT filing, the three withholding PRN generators and eTIMS OSCU automated testing) require an Idempotency-Key header of 16–128 characters. Mock mode does not fabricate successful filing, application or PRN responses; unsupported mappings return HTTP 501.
+
+### Explicit upstream mappings
+
+Set KRA_SERVICE_PATHS_JSON to a JSON object mapping service IDs to exact paths from the current official KRA API documentation. Optionally set KRA_SERVICE_METHODS_JSON (default POST; GET and POST supported). An empty mapping is safe by default and returns 501 rather than guessing endpoint paths. Authorization uses the existing server-side OAuth client-credentials flow.
+
+Example structure only — these are placeholders, not real KRA paths:
+
+```json
+{
+  "pin-checker-by-pin": "/REPLACE_WITH_OFFICIAL_PATH",
+  "nil-return-filing": "/REPLACE_WITH_OFFICIAL_PATH",
+  "invoice-checker": "/REPLACE_WITH_OFFICIAL_PATH"
+}
+```
+
+contracts/kra-services.json records stable IDs and safety metadata. Add service-specific payload and response schemas only from current KRA specifications and sandbox examples.
 ## KRA setup and verification
 
 1. Register at [developer.go.ke](https://developer.go.ke), create an application and subscribe to PIN Checker and, if required, PIN Checker By ID.
@@ -73,7 +131,7 @@ The Python reference currently documents response mappings such as `PINDATA`, `K
 - In-memory token caches and rate limiters are process-local. Use Redis or gateway enforcement for multiple replicas.
 - A PIN match is not proof of identity or tax compliance.
 - Mock tests are not KRA certification. Production use is subject to KRA approval and current terms.
-- The project scope is PIN Checker and PIN Checker By ID, not eTIMS/TCC or other KRA APIs.
+- The generic catalog routes are implemented, but live upstream integration is enabled only after verified service-path, method, payload and response mappings are configured. The catalog does not imply KRA production approval.
 
 ## Documentation
 
