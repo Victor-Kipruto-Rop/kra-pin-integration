@@ -93,7 +93,19 @@ class DirectOscuClient:
                 outcome_unknown=bool(operation["mutates"]),
             ) from exc
         except httpx.HTTPError as exc:
+            if operation["mutates"]:
+                raise OscuError(
+                    "oscu_outcome_unknown",
+                    "KRA OSCU request outcome is unknown; reconcile before resubmitting",
+                    outcome_unknown=True,
+                ) from exc
             raise OscuError("oscu_upstream_unreachable", "Could not reach KRA OSCU") from exc
+        if response.status_code >= 500 and operation["mutates"]:
+            raise OscuError(
+                "oscu_outcome_unknown",
+                "KRA OSCU returned a server error; reconcile before resubmitting",
+                outcome_unknown=True,
+            )
         if response.status_code >= 400:
             raise OscuError("oscu_request_rejected", f"KRA OSCU rejected the request (HTTP {response.status_code})")
         if not response.content:
@@ -101,4 +113,10 @@ class DirectOscuClient:
         try:
             return response.json()
         except ValueError as exc:
+            if operation["mutates"]:
+                raise OscuError(
+                    "oscu_outcome_unknown",
+                    "KRA OSCU returned an invalid response; reconcile before resubmitting",
+                    outcome_unknown=True,
+                ) from exc
             raise OscuError("oscu_invalid_response", "KRA OSCU returned a non-JSON response") from exc
