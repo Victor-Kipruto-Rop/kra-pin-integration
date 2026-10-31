@@ -2,9 +2,9 @@ name: Multi-language CI
 on:
   workflow_dispatch:
   push:
-    paths: ['server/**','languages/**','contracts/**','scripts/**','.github/workflows/multilang.yml','.gitlab-ci.yml']
+    paths: ['server/**','languages/**','contracts/**','scripts/**','sandbox-fixtures/**','.github/workflows/**','.gitlab-ci.yml']
   pull_request:
-    paths: ['server/**','languages/**','contracts/**','scripts/**','.github/workflows/multilang.yml','.gitlab-ci.yml']
+    paths: ['server/**','languages/**','contracts/**','scripts/**','sandbox-fixtures/**','.github/workflows/**','.gitlab-ci.yml']
 permissions:
   contents: read
 concurrency:
@@ -19,7 +19,7 @@ jobs:
         with: {python-version: '3.12'}
       - run: python scripts/validate-catalog.py
       - run: python scripts/validate-oscu-contract.py
-      - run: python -m py_compile scripts/validate-catalog.py scripts/validate-oscu-contract.py scripts/validate-production-config.py scripts/summarize-junit.py scripts/run-oscu-sandbox-check.py
+      - run: python -m py_compile scripts/validate-catalog.py scripts/validate-oscu-contract.py scripts/validate-production-config.py scripts/summarize-junit.py scripts/run-oscu-sandbox-check.py server/app/dotenv_loader.py
   python:
     runs-on: ubuntu-latest
     steps:
@@ -56,21 +56,18 @@ jobs:
   typescript:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: {node-version: '20'}
       - run: cd languages/typescript && npm install --no-audit --no-fund && npm test
   php:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with: {php-version: '8.3', extensions: curl}
       - run: cd languages/php && composer install --no-interaction --prefer-dist && composer test
   ruby:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
       - uses: ruby/setup-ruby@v1
         with: {ruby-version: '3.3', bundler-cache: true, working-directory: languages/ruby}
       - run: cd languages/ruby && bundle exec rspec
