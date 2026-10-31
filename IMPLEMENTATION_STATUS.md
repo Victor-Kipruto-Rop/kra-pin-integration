@@ -73,3 +73,6 @@ Do not merge as production-ready or deploy real taxpayer data until all release 
 - Added API regression coverage for ambiguous catalog and OSCU mutation outcomes, unexpected exceptions, definitive rejection handling, and disabled mutation auth replay.
 - These tests are committed but have **not** been executed in a functioning test runner. Do not interpret committed tests as passing evidence.
 - KRA's exact semantics for 401, 429, 5xx and operation-level rejection still require written confirmation. The adapter intentionally avoids automatic mutation replay where that guarantee is absent.
+
+- The standalone direct OSCU client used by the guarded sandbox runner also enforces this rule internally: mutating manifest operations do not replay after 401 even when a caller uses the default client options; read-only operations may refresh and retry.
+- Added a transport-mocked regression test proving a mutating OSCU operation receives only one POST after 401.
