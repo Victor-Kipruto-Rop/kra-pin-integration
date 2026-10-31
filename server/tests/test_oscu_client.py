@@ -147,3 +147,26 @@ async def test_upstream_error_body_is_not_returned_to_caller():
     assert error.value.code == "oscu_request_rejected"
     assert "private" not in error.value.message and "trace" not in error.value.message
     await client.aclose()
+
+
+async def test_401_does_not_replay_mutating_operation():
+    seen_operations = []
+    token_calls = 0
+
+    def handler(request):
+        nonlocal token_calls
+        if request.url.path == "/v1/token/generate":
+            token_calls += 1
+            return httpx.Response(200, json={"access_token": "token", "expires_in": 3600})
+        seen_operations.append(request.url.path)
+        return httpx.Response(401, json={"error": "not authorized"})
+
+    client = build(handler)
+    with pytest.raises(KraError) as error:
+        await client.invoke("save-item", {"itemCd": "item-1"}, {
+            "tin": "A123456789Z", "bhfId": "00", "cmcKey": "branch-context",
+        })
+    assert error.value.code == "oscu_auth_failed"
+    assert token_calls == 1
+    assert len(seen_operations) == 1
+    await client.aclose()
