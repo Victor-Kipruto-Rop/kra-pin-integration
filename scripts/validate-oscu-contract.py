@@ -93,7 +93,7 @@ def main() -> None:
 
     openapi = OPENAPI.read_text(encoding="utf-8")
     for operation in operations:
-        if f"  {operation['path']}:\\n" not in openapi or f"      operationId: {operation['id']}\\n" not in openapi:
+        if f"  {operation['path']}:\n" not in openapi or f"      operationId: {operation['id']}\n" not in openapi:
             fail(f"OpenAPI contract is missing {operation['id']} ({operation['path']})")
 
     guide = GUIDE.read_text(encoding="utf-8")
