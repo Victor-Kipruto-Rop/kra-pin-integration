@@ -41,3 +41,17 @@ Do not merge as production-ready or deploy real taxpayer data until all release 
 - Python FastAPI uses Redis-backed distributed rate limiting and idempotency when configured; cached KRA responses are Fernet-encrypted, tenant-scoped OSCU keys prevent cross-tenant replay, and the readiness endpoint checks security-store availability.
 - Added a Redis-backed local Docker Compose stack and production preflight requirements.
 - These changes have not passed a functioning CI runner yet. Live KRA sandbox testing, formal schemas and certification remain pending.
+
+
+## Local CI execution path
+
+- Added `scripts/ci-local.sh` to run catalog validation, OSCU manifest parity, Python reference/API tests, and the Go, Java, JavaScript, TypeScript, PHP and Ruby suites locally.
+- Added root `Makefile` targets for validation, each language test suite, full matrix testing and safe OSCU dry-run invocation.
+- Added [local CI and release validation instructions](docs/ci-local-validation.md), including GitLab CI fallback and the distinction between code tests and KRA sandbox evidence.
+- The local runner has been committed but has not been executed in this environment; the container could not resolve github.com to clone the repository. Do not report its tests as passing until run on a machine or CI runner with the required runtimes installed.
+
+## Remaining external and release blockers
+
+- GitHub Actions runs still fail before any job steps execute (empty step lists); billing/runner provisioning must be resolved or the GitLab pipeline must be run after importing/mirroring the repository.
+- Official KRA documentation distinguishes the eTIMS OSCU/VSCU system-to-system integration and certification process from the separate GavaConnect API catalog. The 23-operation sandbox collection in this repository must be checked with KRA to confirm that its host, token route and endpoint inventory are the intended product-specific automated-testing API; it must not be presented as the standard OSCU device API without that confirmation.
+- KRA-issued credentials, approved taxpayer test data, complete official per-service contracts, live sandbox evidence, certification, privacy/legal review and independent security review remain external requirements.
