@@ -107,10 +107,23 @@ export class DirectOscuClient {
         operation.mutates,
       );
     }
-    if (!response.ok) throw new OscuError('oscu_request_rejected', `KRA OSCU rejected request (HTTP ${response.status})`);
-    const text = await response.text();
+    if (!response.ok) {
+      if (operation.mutates && response.status >= 500) {
+        throw new OscuError('oscu_outcome_unknown', 'KRA OSCU returned a server error; reconcile before resubmitting', true);
+      }
+      throw new OscuError('oscu_request_rejected', `KRA OSCU rejected request (HTTP ${response.status})`);
+    }
+    let text: string;
+    try { text = await response.text(); }
+    catch {
+      if (operation.mutates) throw new OscuError('oscu_outcome_unknown', 'KRA OSCU response could not be read; reconcile before resubmitting', true);
+      throw new OscuError('oscu_response_read_failed', 'Could not read KRA OSCU response');
+    }
     if (!text.trim()) return null;
     try { return JSON.parse(text) as unknown; }
-    catch { throw new OscuError('oscu_invalid_response', 'KRA OSCU returned a non-JSON response'); }
+    catch {
+      if (operation.mutates) throw new OscuError('oscu_outcome_unknown', 'KRA OSCU returned an invalid response; reconcile before resubmitting', true);
+      throw new OscuError('oscu_invalid_response', 'KRA OSCU returned a non-JSON response');
+    }
   }
 }
