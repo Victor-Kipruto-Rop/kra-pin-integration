@@ -79,7 +79,7 @@ The workflow runs one selected operation only. It is not a full 23-operation cer
 
 ## Evidence format
 
-Each evidence record includes timestamp, operation ID/path, environment, payload and response hashes, anonymous response shape/counts, presence-only tenant-context indicators, and explicit redaction flags. It excludes raw values and object field names. Hashes are integrity references, not proof of taxpayer identity or business correctness.
+Each evidence record includes timestamp, operation ID/path, environment, payload and response SHA-256 fingerprints, anonymous response shape/counts, presence-only tenant-context indicators, and explicit redaction flags. It excludes raw values and object field names. SHA-256 fingerprints are deterministic and may be guessable for low-entropy inputs; treat evidence as sensitive operational metadata and share it only with authorized reviewers. Hashes are integrity references, not proof of taxpayer identity or business correctness.
 
 ## Certification checklist
 
