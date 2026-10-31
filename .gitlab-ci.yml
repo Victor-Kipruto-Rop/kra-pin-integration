@@ -63,9 +63,6 @@ typescript-tests:
 php-tests:
   stage: test
   image: composer:2
-  before_script:
-    - apk add --no-cache php83-cli php83-curl php83-mbstring php83-xml php83-dom php83-xmlwriter php83-tokenizer php83-phar php83-openssl
-    - ln -sf /usr/bin/php83 /usr/bin/php
   script:
     - cd languages/php
     - composer install --no-interaction --prefer-dist
