@@ -149,6 +149,8 @@ The PIN-specific legacy routes still contain example response mappings; confirm 
 - [KRA 22-service integration guide](docs/kra-catalog-integration.md)
 - [Direct eTIMS OSCU integration](docs/etims-oscu-direct-integration.md)
 - [Direct OSCU endpoint inventory](contracts/etims-oscu-direct.endpoints.json)
+- [Direct OSCU OpenAPI contract](contracts/etims-oscu-openapi.yaml)
+- [Production hardening and local Redis stack](docs/production-hardening-and-local-stack.md)
 - [Language guides](docs/language-guides/README.md)
 - [Security](docs/security.md)
 - [Production readiness assessment](PRODUCTION_READINESS.md)
