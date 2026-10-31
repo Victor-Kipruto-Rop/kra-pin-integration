@@ -1,9 +1,15 @@
 name: Multi-language CI
 on:
+  workflow_dispatch:
   push:
     paths: ['languages/**','contracts/**','.github/workflows/multilang.yml']
   pull_request:
     paths: ['languages/**','contracts/**','.github/workflows/multilang.yml']
+permissions:
+  contents: read
+concurrency:
+  group: multilang-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   go:
     runs-on: ubuntu-latest
