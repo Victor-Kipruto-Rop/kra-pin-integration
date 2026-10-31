@@ -119,7 +119,7 @@ contracts/kra-services.json records stable IDs and safety metadata. Add service-
 2. Obtain the current API specification for every subscribed service, including method, path, request schema, response schema, scopes, and error codes.
 3. Configure sandbox consumer credentials securely, set `KRA_MOCK=false`, and populate `KRA_SERVICE_PATHS_JSON` / `KRA_SERVICE_METHODS_JSON` from those official specifications.
 4. Test each read-only and mutating operation separately in the approved sandbox. Verify token expiry, duplicate/idempotency behavior, rejected requests and upstream errors.
-5. For eTIMS OSCU, use the KRA-published OSCU sandbox/production host and the taxpayer's approved integration configuration; set `KRA_ETIMS_BASE_URL` accordingly.
+5. For the eTIMS OSCU catalog service, use its verified GavaConnect mapping. Direct OSCU device-protocol integration is separate and requires KRA sandbox testing and certification.
 6. Request production access from KRA and use separately issued production credentials.
 
 The PIN-specific legacy routes still contain example response mappings such as `PINDATA`, `KRAPIN`, `Name` and error code `30002`; confirm them against sandbox. The 22-service dispatcher passes through the service-specific JSON response and must be paired with verified per-service schemas before release. Do not claim sandbox or production verification until it has actually succeeded.
