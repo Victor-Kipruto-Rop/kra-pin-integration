@@ -1,9 +1,9 @@
 {
-  "note": "Populate every empty path only from the currently approved KRA API specification. POST is a placeholder and must be checked against the spec; this file is not directly deployable.",
+  "note": "Only non-empty paths backed by supplied official KRA Postman specifications are configured. All other paths remain empty and fail closed. The OAuth token endpoint is handled by the shared server-side token client.",
   "paths": {
     "pin-checker-by-pin": "",
     "pin-checker-by-id": "",
-    "fetch-taxpayer-obligations": "",
+    "fetch-taxpayer-obligations": "/dtd/checker/v1/obligation",
     "know-kra-tax-service-office": "",
     "tax-compliance-certificate-application": "",
     "tax-compliance-certificate-checker": "",
