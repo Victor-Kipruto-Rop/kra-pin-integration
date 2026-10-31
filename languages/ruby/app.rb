@@ -63,7 +63,7 @@ class KraPinApp
   if id=='authorization';token(ck,cs);return reply(200,{authorized:true,token_type:'Bearer'});end
   upstream_path=@service_paths[id];return reply(501,{error:{code:'service_not_configured',message:'No verified KRA endpoint mapping configured'}}) unless upstream_path.is_a?(String)&&upstream_path.start_with?('/')&&!upstream_path.start_with?('//')
   method=(@service_methods[id]||'POST').upcase;return reply(501,{detail:'Unsupported or unsafe configured HTTP method'}) unless ['GET','POST'].include?(method)&&!(method=='GET'&&mutates)
-  upstream_base=id=='etims-oscu-integrator-automated-testing' ? ENV.fetch('KRA_ETIMS_BASE_URL','') : @base
+  upstream_base=@base
   begin
    parsed_base=URI(upstream_base);return reply(501,{error:{code:'service_base_not_configured',message:'Set a verified HTTPS KRA base URL for this service'}}) unless parsed_base.scheme=='https'&&parsed_base.host&.end_with?('.kra.go.ke')
    access=token(ck,cs);response=upstream_request(method,upstream_base,upstream_path,body['payload'],access)
