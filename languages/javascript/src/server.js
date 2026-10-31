@@ -31,7 +31,7 @@ async function invokeService(req,res,id,k){
  const upstreamBase=id==='etims-oscu-integrator-automated-testing'?etimsBase:base;try{const u=new URL(upstreamBase);if(u.protocol!=='https:'||!u.hostname.endsWith('.kra.go.ke'))throw Error('invalid host');}catch{return send(res,501,{error:{code:'service_base_not_configured',message:'Set a verified HTTPS KRA base URL for this service'}});}
  try{
   let tok=await token(ck,cs),response=await fetch(upstreamBase+path,{method,headers:{authorization:'Bearer '+tok,'content-type':'application/json'},...(method==='POST'?{body:JSON.stringify(body.payload)}:{}),signal:AbortSignal.timeout(20000)});
-  if(response.status===401){cache.delete(ck);tok=await token(ck,cs);response=await fetch(base+path,{method,headers:{authorization:'Bearer '+tok,'content-type':'application/json'},...(method==='POST'?{body:JSON.stringify(body.payload)}:{}),signal:AbortSignal.timeout(20000)});}
+  if(response.status===401){cache.delete(ck);tok=await token(ck,cs);response=await fetch(upstreamBase+path,{method,headers:{authorization:'Bearer '+tok,'content-type':'application/json'},...(method==='POST'?{body:JSON.stringify(body.payload)}:{}),signal:AbortSignal.timeout(20000)});}
   const raw=await response.text();let data;try{data=raw?JSON.parse(raw):{};}catch{return send(res,502,{error:{code:'invalid_upstream_response',message:'KRA returned non-JSON content'}});}
   if(!response.ok)return send(res,response.status===429?429:502,{error:{code:'kra_upstream_error',message:'KRA service request failed',upstream_status:response.status}});
   if(idemKey)idempotency.set(idemKey,data);return send(res,200,data);
