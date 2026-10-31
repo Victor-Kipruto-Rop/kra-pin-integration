@@ -1,7 +1,11 @@
 openapi: 3.1.0
 info:
-  title: KRA PIN Integration Proxy
-  version: 1.0.0
+  title: KRA GavaConnect Multi-service Integration Proxy
+  version: 2.0.0
+  description: >
+    Language-neutral proxy contract for the 22 catalog services. Upstream paths,
+    methods and payload schemas must be configured from current official KRA
+    specifications; the proxy does not guess them.
 servers:
   - url: http://localhost:8000
 paths:
@@ -10,8 +14,76 @@ paths:
       security: []
       responses:
         '200': {description: Service health}
+  /v1/kra/{serviceId}:
+    post:
+      operationId: invokeKraCatalogService
+      summary: Invoke one of the 22 KRA catalog services
+      description: >
+        Sends the supplied JSON payload to the configured upstream mapping.
+        All requests require explicit taxpayer consent. Mutating services
+        require Idempotency-Key. Authorization returns an access token and
+        must never be exposed to browser/mobile clients.
+      security:
+        - ApiKey: []
+      parameters:
+        - name: serviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - authorization
+              - pin-checker-by-pin
+              - pin-checker-by-id
+              - fetch-taxpayer-obligations
+              - know-kra-tax-service-office
+              - tax-compliance-certificate-application
+              - tax-compliance-certificate-checker
+              - vat-exemption-checker
+              - it-exemption-checker
+              - nil-return-filing
+              - tot-return-filing
+              - income-tax-withholding-prn-generation
+              - vat-withholding-prn-generation
+              - rental-withholding-prn-generation
+              - excise-license-checker-by-pin
+              - excise-license-checker-by-certificate-number
+              - customs-declaration-status-checker
+              - customs-tax-calculator
+              - import-certificate-checker-by-pin
+              - import-certificate-checker-by-cert-number
+              - invoice-checker
+              - etims-oscu-integrator-automated-testing
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: Required for filing, certificate application, PRN generation and eTIMS testing operations.
+          schema: {type: string, minLength: 16, maxLength: 128}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [consent, payload]
+              properties:
+                consent: {type: boolean, const: true}
+                payload:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '200': {description: KRA service response (shape depends on official service schema)}
+        '400': {description: Consent missing or idempotency key required}
+        '401': {description: Invalid proxy key or KRA authorization rejected}
+        '404': {description: Unknown service}
+        '413': {description: Request body too large}
+        '422': {description: Invalid request body}
+        '429': {description: Rate limit}
+        '501': {description: Service exists in catalog but no verified upstream mapping is configured}
+        '502': {description: KRA upstream error}
   /v1/pin/verify:
     post:
+      deprecated: true
       security: [{ApiKey: []}]
       requestBody:
         required: true
@@ -24,7 +96,7 @@ paths:
                 pin: {type: string, maxLength: 20}
                 consent: {type: boolean, const: true}
       responses:
-        '200': {description: PIN lookup result}
+        '200': {description: Legacy PIN lookup result}
         '400': {description: Consent missing}
         '401': {description: Invalid API key}
         '422': {description: Invalid input}
@@ -32,6 +104,7 @@ paths:
         '502': {description: Upstream error}
   /v1/pin/verify-by-id:
     post:
+      deprecated: true
       security: [{ApiKey: []}]
       requestBody:
         required: true
@@ -45,7 +118,7 @@ paths:
                 taxpayer_type: {type: string, default: KE}
                 consent: {type: boolean, const: true}
       responses:
-        '200': {description: PIN lookup result}
+        '200': {description: Legacy PIN lookup result}
         '400': {description: Consent missing}
         '401': {description: Invalid API key}
         '422': {description: Invalid input}
