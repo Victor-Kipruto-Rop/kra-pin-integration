@@ -25,7 +25,7 @@ def create_app(settings: Settings | None = None, client=None, oscu_client=None) 
     settings = settings or load_settings()
     validate_settings(settings)
     limiter = RateLimiter(settings.rate_limit_per_minute)
-    idempotency_cache: dict[str, tuple[str, dict]] = {}
+    idempotency_cache: dict[str, tuple[str, dict | None]] = {}
     idempotency_lock = asyncio.Lock()
     service_mutates = {"authorization": False, "pin-checker-by-pin": False, "pin-checker-by-id": False, "fetch-taxpayer-obligations": False, "know-kra-tax-service-office": False, "tax-compliance-certificate-application": True, "tax-compliance-certificate-checker": False, "vat-exemption-checker": False, "it-exemption-checker": False, "nil-return-filing": True, "tot-return-filing": True, "income-tax-withholding-prn-generation": True, "vat-withholding-prn-generation": True, "rental-withholding-prn-generation": True, "excise-license-checker-by-pin": False, "excise-license-checker-by-certificate-number": False, "customs-declaration-status-checker": False, "customs-tax-calculator": False, "import-certificate-checker-by-pin": False, "import-certificate-checker-by-cert-number": False, "invoice-checker": False, "etims-oscu-integrator-automated-testing": True}
     kra = client or (MockKraClient() if settings.mock else KraClient(settings))
@@ -191,8 +191,15 @@ def create_app(settings: Settings | None = None, client=None, oscu_client=None) 
                 if prior:
                     if prior[0] != fingerprint:
                         raise HTTPException(status_code=409, detail="Idempotency-Key was reused with a different payload")
+                    if prior[1] is None:
+                        raise HTTPException(status_code=409, detail="Previous OSCU request outcome is unknown; reconcile with KRA before retrying")
                     return prior[1]
-                result = await oscu.invoke(operation_id, payload, tenant_headers)
+                try:
+                    result = await oscu.invoke(operation_id, payload, tenant_headers)
+                except KraError as exc:
+                    if exc.code == "oscu_outcome_unknown":
+                        idempotency_cache[cache_key] = (fingerprint, None)
+                    raise
                 idempotency_cache[cache_key] = (fingerprint, result)
                 return result
         return await oscu.invoke(operation_id, payload, tenant_headers)
