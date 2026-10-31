@@ -159,4 +159,16 @@ def test_production_accepts_configured_shared_idempotency_store():
         pin_secret="secret",
         proxy_api_keys=("production-key",),
         idempotency_redis_url="rediss://redis.example.invalid:6379/0",
+        idempotency_encryption_key="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
     ))
+
+
+def test_production_requires_idempotency_encryption_key():
+    with pytest.raises(ConfigError, match="IDEMPOTENCY_ENCRYPTION_KEY"):
+        validate_settings(Settings(
+            environment="production",
+            pin_key="consumer",
+            pin_secret="secret",
+            proxy_api_keys=("production-key",),
+            idempotency_redis_url="rediss://redis.example.invalid:6379/0",
+        ))
