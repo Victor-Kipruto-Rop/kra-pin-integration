@@ -213,7 +213,7 @@ def create_app(settings: Settings | None = None, client=None, oscu_client=None, 
         if cache_key:
             return await execute_idempotently(
                 cache_key, fingerprint,
-                lambda: kra.invoke_catalog_service(service_id, payload),
+                lambda: kra.invoke_catalog_service(service_id, payload, retry_auth=not service_mutates[service_id]),
                 {"upstream_timeout", "upstream_unreachable", "upstream_error", "kra_upstream_error", "unexpected_response"},
             )
         return await kra.invoke_catalog_service(service_id, payload)
@@ -250,7 +250,7 @@ def create_app(settings: Settings | None = None, client=None, oscu_client=None, 
         if cache_key:
             return await execute_idempotently(
                 cache_key, fingerprint,
-                lambda: oscu.invoke(operation_id, payload, tenant_headers),
+                lambda: oscu.invoke(operation_id, payload, tenant_headers, retry_auth=not operation.get("mutates", False)),
                 {"oscu_outcome_unknown", "oscu_upstream_unreachable", "oscu_upstream_error", "oscu_unexpected_response"},
             )
         return await oscu.invoke(operation_id, payload, tenant_headers)
