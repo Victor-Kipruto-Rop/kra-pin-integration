@@ -61,12 +61,20 @@ module KraPin
         raise OscuError.new('oscu_upstream_unreachable', 'Could not reach KRA OSCU'), cause: error
       end
       unless response[:status].between?(200, 299)
+        if operation.fetch('mutates') && response[:status] >= 500
+          raise OscuError.new('oscu_outcome_unknown', 'KRA OSCU returned a server error; reconcile before resubmitting', outcome_unknown: true)
+        end
         raise OscuError.new('oscu_request_rejected', "KRA OSCU rejected request (HTTP #{response[:status]})")
       end
       return nil if response[:body].to_s.strip.empty?
-      JSON.parse(response[:body])
-    rescue JSON::ParserError
-      raise OscuError.new('oscu_invalid_response', 'KRA OSCU returned a non-JSON response')
+      begin
+        JSON.parse(response[:body])
+      rescue JSON::ParserError
+        if operation.fetch('mutates')
+          raise OscuError.new('oscu_outcome_unknown', 'KRA OSCU returned an invalid response; reconcile before resubmitting', outcome_unknown: true)
+        end
+        raise OscuError.new('oscu_invalid_response', 'KRA OSCU returned a non-JSON response')
+      end
     end
 
     private
