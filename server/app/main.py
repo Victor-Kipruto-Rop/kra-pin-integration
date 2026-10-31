@@ -25,7 +25,7 @@ def create_app(settings: Settings | None = None, client=None, oscu_client=None, 
     settings = settings or load_settings()
     validate_settings(settings)
     limiter = RateLimiter(settings.rate_limit_per_minute)
-    store = idempotency_store or (RedisIdempotencyStore(settings.idempotency_redis_url, settings.idempotency_ttl_seconds) if settings.idempotency_redis_url else MemoryIdempotencyStore())
+    store = idempotency_store or (RedisIdempotencyStore(settings.idempotency_redis_url, settings.idempotency_encryption_key, settings.idempotency_ttl_seconds) if settings.idempotency_redis_url else MemoryIdempotencyStore())
     service_mutates = {"authorization": False, "pin-checker-by-pin": False, "pin-checker-by-id": False, "fetch-taxpayer-obligations": False, "know-kra-tax-service-office": False, "tax-compliance-certificate-application": True, "tax-compliance-certificate-checker": False, "vat-exemption-checker": False, "it-exemption-checker": False, "nil-return-filing": True, "tot-return-filing": True, "income-tax-withholding-prn-generation": True, "vat-withholding-prn-generation": True, "rental-withholding-prn-generation": True, "excise-license-checker-by-pin": False, "excise-license-checker-by-certificate-number": False, "customs-declaration-status-checker": False, "customs-tax-calculator": False, "import-certificate-checker-by-pin": False, "import-certificate-checker-by-cert-number": False, "invoice-checker": False, "etims-oscu-integrator-automated-testing": True}
     kra = client or (MockKraClient() if settings.mock else KraClient(settings))
     oscu = oscu_client or (DirectOscuClient(settings) if settings.etims_oscu_enabled else None)
