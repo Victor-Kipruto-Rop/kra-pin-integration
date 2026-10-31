@@ -121,11 +121,20 @@ func (c *Client) Invoke(ctx context.Context, operationID string, payload map[str
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		if op.Mutates && resp.StatusCode >= 500 {
+			return nil, &OscuError{Code: "oscu_outcome_unknown", Message: "KRA OSCU returned a server error; reconcile before resubmitting", OutcomeUnknown: true}
+		}
 		return nil, &OscuError{Code: "oscu_request_rejected", Message: fmt.Sprintf("KRA OSCU rejected request (HTTP %d)", resp.StatusCode)}
 	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
-	if err != nil { return nil, &OscuError{Code: "oscu_response_read_failed", Message: "Could not read KRA OSCU response"} }
+	if err != nil {
+		if op.Mutates { return nil, &OscuError{Code: "oscu_outcome_unknown", Message: "KRA OSCU response could not be read; reconcile before resubmitting", OutcomeUnknown: true} }
+		return nil, &OscuError{Code: "oscu_response_read_failed", Message: "Could not read KRA OSCU response"}
+	}
 	if len(bytes.TrimSpace(body)) == 0 { return json.RawMessage("null"), nil }
-	if !json.Valid(body) { return nil, &OscuError{Code: "oscu_invalid_response", Message: "KRA OSCU returned non-JSON content"} }
+	if !json.Valid(body) {
+		if op.Mutates { return nil, &OscuError{Code: "oscu_outcome_unknown", Message: "KRA OSCU returned an invalid response; reconcile before resubmitting", OutcomeUnknown: true} }
+		return nil, &OscuError{Code: "oscu_invalid_response", Message: "KRA OSCU returned non-JSON content"}
+	}
 	return json.RawMessage(body), nil
 }
