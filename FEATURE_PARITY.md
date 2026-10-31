@@ -5,7 +5,8 @@ The following is an honest implementation inventory, not a claim that all runtim
 | Capability | Python reference | Go | Java | JavaScript | TypeScript | PHP | Ruby |
 |---|---|---|---|---|---|---|---|
 | Health endpoint | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
-| 22-service catalog dispatcher | Yes | Yes | Yes | Yes | Yes | Yes | Yes |\n| PIN Checker and PIN Checker BY ID service IDs | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| 22-service catalog dispatcher | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| PIN Checker and PIN Checker BY ID service IDs | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | API-key authentication | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | Consent enforcement | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | Mock mode | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
@@ -19,7 +20,14 @@ The following is an honest implementation inventory, not a claim that all runtim
 | Catalog coverage tests | 22 route registrations | 22 IDs + unmapped 501 | 22 IDs | 22 IDs | 22 IDs | Shared JSON catalog | 22 IDs |
 | Dockerfile | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 
-## Catalog dispatcher behavior\n- All seven implementations expose POST /v1/kra/{service-id} for the canonical 22-service catalog.\n- All require consent; mutating services require Idempotency-Key.\n- Upstream paths/methods are explicitly configured; missing mappings return 501 instead of guessed KRA calls.\n- eTIMS OSCU uses a separate configurable KRA HTTPS base URL.\n- Mock mode does not fabricate successful filing, PRN, TCC application or eTIMS responses.\n\n## Additional hardening applied in this branch
+## Catalog dispatcher behavior
+- All seven implementations expose POST /v1/kra/{service-id} for the canonical 22-service catalog.
+- All require consent; mutating services require Idempotency-Key.
+- Upstream paths/methods are explicitly configured; missing mappings return 501 instead of guessed KRA calls.
+- eTIMS OSCU uses a separate configurable KRA HTTPS base URL.
+- Mock mode does not fabricate successful filing, PRN, TCC application or eTIMS responses.
+
+## Additional hardening applied in this branch
 - Go, Java, JavaScript and TypeScript validate sandbox/production configuration; production mode rejects mock mode.
 - Non-mock startup requires KRA credentials in all six additional language templates.
 - Node.js, TypeScript, PHP and Ruby enforce a 64 KiB request-body cap.
