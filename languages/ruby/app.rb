@@ -52,7 +52,12 @@ class KraPinApp
   return reply(422,{detail:'payload must be a JSON object'}) unless body['payload'].is_a?(Hash)
   idem=req.get_header('HTTP_IDEMPOTENCY_KEY');return reply(400,{detail:'Idempotency-Key (16-128 chars) is required'}) if mutates&&(idem.nil?||idem.length<16||idem.length>128)
   ik=idem ? Digest::SHA256.hexdigest("#{key}:#{id}:#{idem}") : nil
-  cached=@mutex.synchronize{@idempotency[ik]} if ik;return reply(200,cached) if cached
+  fingerprint=Digest::SHA256.hexdigest(JSON.generate(body['payload']))
+  cached=@mutex.synchronize{@idempotency[ik]} if ik
+  if cached
+   return reply(409,{error:{code:'idempotency_conflict',message:'Idempotency-Key was already used with a different payload'}}) unless cached[:fingerprint]==fingerprint
+   return reply(200,cached[:data])
+  end
   return reply(501,{error:{code:'mock_service_not_implemented',message:'Configure a verified KRA sandbox mapping; no filing or payment mock is fabricated'}}) if @mock
   ck=ENV.fetch('KRA_PIN_CONSUMER_KEY','');cs=ENV.fetch('KRA_PIN_CONSUMER_SECRET','')
   if id=='authorization';return reply(200,{access_token:token(ck,cs),token_type:'Bearer'});end
@@ -65,7 +70,7 @@ class KraPinApp
    if response.code.to_i==401;@cache.delete(ck);access=token(ck,cs);response=upstream_request(method,upstream_base,upstream_path,body['payload'],access);end
    data=JSON.parse(response.body.empty? ? '{}' : response.body)
    return reply(response.code.to_i==429 ? 429 : 502,{error:{code:'kra_upstream_error',message:'KRA service request failed'}}) unless response.is_a?(Net::HTTPSuccess)
-   @mutex.synchronize{@idempotency[ik]=data} if ik
+   @mutex.synchronize{@idempotency[ik]={fingerprint:fingerprint,data:data}} if ik
    reply(200,data)
   rescue JSON::ParserError;reply(502,{error:{code:'invalid_upstream_response',message:'KRA returned non-JSON content'}})
   rescue StandardError;reply(502,{error:{code:'upstream_error',message:'KRA service request failed'}})
