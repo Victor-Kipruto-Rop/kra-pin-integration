@@ -21,11 +21,16 @@ def test_evidence_contains_hashes_and_shape_but_not_sensitive_values():
     assert evidence["response"]["sha256"]
     assert evidence["tenant_context"]["tin_present"] is True
     assert evidence["redaction"]["response_body_stored"] is False
+    assert evidence["redaction"]["object_keys_stored"] is False
+    assert evidence["request"]["payload_top_level_key_count"] == 3
 
 
-def test_response_shape_never_includes_values():
-    shape = response_shape({"token": "abc", "items": [{"pin": "secret"}]})
+def test_response_shape_never_includes_values_or_dynamic_object_keys():
+    shape = response_shape({"A123456789Z": {"pin": "secret"}, "items": [{"pin": "private"}]})
+    serialized = str(shape)
     assert shape["type"] == "object"
-    assert "abc" not in str(shape)
-    assert "secret" not in str(shape)
-    assert shape["fields"]["items"]["type"] == "array"
+    assert "A123456789Z" not in serialized
+    assert "secret" not in serialized
+    assert "private" not in serialized
+    assert "pin" not in serialized
+    assert shape["field_shapes"][0]["type"] in {"object", "array"}
