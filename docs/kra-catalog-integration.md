@@ -69,3 +69,23 @@ The catalog entry `etims-oscu-integrator-automated-testing` is dispatched throug
 - Mock mode does not invent successful responses for returns, TCC applications, PRN generation or eTIMS testing. Those routes return HTTP 501 until a real verified sandbox adapter is configured.
 - Token caches, rate limiters and idempotency caches are currently process-local (PHP uses local request/container storage); they are not sufficient for multi-replica production. Use shared Redis/database-backed implementations before horizontal scaling.
 - No service is considered sandbox-verified until its official payload, response, error and replay cases have passing integration tests using approved KRA credentials.
+
+
+## Implemented contract: Fetch Taxpayer Obligations
+
+The supplied Postman collection documents this sandbox operation:
+
+- OAuth: `GET https://sbx.kra.go.ke/v1/token/generate?grant_type=client_credentials` using HTTP Basic credentials (consumer key as username, consumer secret as password).
+- Operation: `POST https://sbx.kra.go.ke/dtd/checker/v1/obligation` using `Authorization: Bearer <access_token>`.
+- JSON payload: `{ "taxPayerPin": "<taxpayer PIN>" }`.
+
+The shared token client already obtains the token server-side and caches it; callers never submit or receive the KRA bearer token. The mapping template now configures the exact relative path and POST method. Example proxy invocation:
+
+```bash
+curl -X POST http://localhost:8000/v1/kra/fetch-taxpayer-obligations \\
+  -H "X-API-Key: $PROXY_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"consent":true,"payload":{"taxPayerPin":"A000000000B"}}'
+```
+
+Set `KRA_MOCK=false`, `KRA_PIN_CONSUMER_KEY`, `KRA_PIN_CONSUMER_SECRET`, and the mapping JSON from `contracts/kra-service-mappings.template.json`. The request field spelling is case-sensitive. The Postman collection contains no response examples, so response schema, error mapping, authorization scope and live sandbox success remain unverified. Do not infer these from the collection.
