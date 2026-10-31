@@ -76,3 +76,11 @@ Do not merge as production-ready or deploy real taxpayer data until all release 
 
 - The standalone direct OSCU client used by the guarded sandbox runner also enforces this rule internally: mutating manifest operations do not replay after 401 even when a caller uses the default client options; read-only operations may refresh and retry.
 - Added a transport-mocked regression test proving a mutating OSCU operation receives only one POST after 401.
+
+
+## Cross-language OSCU ambiguous-outcome parity
+
+- Go, Java, JavaScript, TypeScript, PHP, Ruby and the standalone Python SDK now treat mutation transport failures, HTTP 5xx responses and malformed/unreadable success responses as unknown outcomes requiring reconciliation.
+- Definitive non-5xx HTTP rejections remain explicit request rejections; automatic retry is not performed by these SDK clients.
+- Added regression tests for the Python, Go, JavaScript, TypeScript, PHP and Ruby clients. Java's production code path has been hardened, but a transport-mocked regression test is still outstanding.
+- Full seven-runtime tests remain unexecuted; no language-level change in this section is considered verified until the local matrix or GitLab CI completes successfully.
