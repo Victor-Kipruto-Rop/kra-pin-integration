@@ -51,7 +51,7 @@ def validate(env: dict[str, str]) -> list[str]:
 
     for service_id in REQUIRED_UPSTREAM:
         path = paths.get(service_id)
-        if isinstance(path, str) and path.startswith("/") and (".." in path.split("/") or "\\\\" in path):
+        if isinstance(path, str) and path.startswith("/") and (".." in path.split("/") or chr(92) in path):
             errors.append(f"Unsafe path configured for {service_id}")
 
     return errors
