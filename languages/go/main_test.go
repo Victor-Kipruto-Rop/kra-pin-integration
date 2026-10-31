@@ -2,6 +2,8 @@ package main
 
 import (
  "net/http"
+ "net/http/httptest"
+ "strings"
  "testing"
 )
 
@@ -21,4 +23,17 @@ func TestUnmappedServiceDoesNotInventEndpoint(t *testing.T) {
 
 func TestUnknownServiceIsNotCatalogued(t *testing.T) {
  if _,ok:=serviceMutates["invented-service"];ok { t.Fatal("unexpected service") }
+}
+
+func TestCatalogHandlerRequiresConsentAndIdempotency(t *testing.T) {
+ c:=Config{Env:"sandbox",Base:"https://sbx.kra.go.ke",Mock:true,Consent:true,APIKeys:[]string{"ci-test-key"}}
+ limiter:=&Limiter{hits:map[string][]time.Time{}}
+ handler:=serviceHandler(c,&http.Client{},limiter)
+ request:=func(path,body,idem string)*httptest.ResponseRecorder{
+  req:=httptest.NewRequest(http.MethodPost,"/v1/kra/"+path,strings.NewReader(body));req.Header.Set("X-API-Key","ci-test-key");if idem!=""{req.Header.Set("Idempotency-Key",idem)}
+  rec:=httptest.NewRecorder();handler(rec,req);return rec
+ }
+ if got:=request("pin-checker-by-pin",`{"consent":false,"payload":{}}`,"").Code;got!=400{t.Fatalf("consent status=%d",got)}
+ if got:=request("nil-return-filing",`{"consent":true,"payload":{}}`,"").Code;got!=400{t.Fatalf("idempotency status=%d",got)}
+ if got:=request("pin-checker-by-pin",`{"consent":true,"payload":{}}`,"").Code;got!=501{t.Fatalf("mock fail-closed status=%d",got)}
 }
