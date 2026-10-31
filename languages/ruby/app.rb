@@ -7,7 +7,7 @@ require 'openssl'
 require 'thread'
 class KraPinApp
  def initialize
-  @env=ENV.fetch('KRA_ENVIRONMENT','sandbox');@mock=ENV.fetch('KRA_MOCK','true')=='true';raise 'Mock mode forbidden in production' if @mock&&@env=='production'
+  @env=ENV.fetch('KRA_ENVIRONMENT','sandbox');raise 'KRA_ENVIRONMENT must be sandbox or production' unless ['sandbox','production'].include?(@env);@mock=ENV.fetch('KRA_MOCK','true')=='true';raise 'Mock mode forbidden in production' if @mock&&@env=='production';raise 'KRA credentials required when mock mode is disabled' if !@mock&&(ENV.fetch('KRA_PIN_CONSUMER_KEY','').empty?||ENV.fetch('KRA_PIN_CONSUMER_SECRET','').empty?)
   @base=@env=='production'?'https://api.kra.go.ke':'https://sbx.kra.go.ke';@keys=ENV.fetch('PROXY_API_KEYS','').split(',').map(&:strip).reject(&:empty?);raise 'PROXY_API_KEYS required' if @keys.empty?;@cache={};@hits={};@mutex=Mutex.new
  end
  def call(env)
