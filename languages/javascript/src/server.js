@@ -31,7 +31,7 @@ async function invokeService(req,res,id,k){
  if(id==='authorization'){try{await token(ck,cs);return send(res,200,{authorized:true,token_type:'Bearer'});}catch{return send(res,502,{error:{code:'authorization_failed',message:'KRA authorization failed'}});}}
  const path=servicePaths[id];if(typeof path!=='string'||!path.startsWith('/')||path.startsWith('//'))return send(res,501,{error:{code:'service_not_configured',message:'No verified KRA endpoint mapping configured for this service'}});
  const method=String(serviceMethods[id]||'POST').toUpperCase();if(!['GET','POST'].includes(method)||(method==='GET'&&services[id]))return send(res,501,{detail:'Unsupported or unsafe configured HTTP method'});
- const upstreamBase=id==='etims-oscu-integrator-automated-testing'?etimsBase:base;try{const u=new URL(upstreamBase);if(u.protocol!=='https:'||!u.hostname.endsWith('.kra.go.ke'))throw Error('invalid host');}catch{return send(res,501,{error:{code:'service_base_not_configured',message:'Set a verified HTTPS KRA base URL for this service'}});}
+ const upstreamBase=base;try{const u=new URL(upstreamBase);if(u.protocol!=='https:'||!u.hostname.endsWith('.kra.go.ke'))throw Error('invalid host');}catch{return send(res,501,{error:{code:'service_base_not_configured',message:'Set a verified HTTPS KRA base URL for this service'}});}
  try{
   let target;try{target=buildServiceUrl(upstreamBase,path,body.payload,method);}catch{return send(res,422,{detail:'GET query payload values must be scalar'});}
   let tok=await token(ck,cs),response=await fetch(target,{method,headers:{authorization:'Bearer '+tok,'content-type':'application/json'},...(method==='POST'?{body:JSON.stringify(body.payload)}:{}),signal:AbortSignal.timeout(20000)});
