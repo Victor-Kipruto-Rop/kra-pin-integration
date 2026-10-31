@@ -1,5 +1,8 @@
 # KRA PIN Integration — Multi-language templates
 
+> **Release status: NOT PRODUCTION READY — validation required.** See [Production Readiness](PRODUCTION_READINESS.md) for release gates and evidence requirements.
+
+
 Unofficial, server-side integration templates for verifying KRA PINs through the official GavaConnect developer gateway ([developer.go.ke](https://developer.go.ke)). This project is community software and is not affiliated with or endorsed by the Kenya Revenue Authority. It never scrapes iTax. Check current KRA terms and API documentation before going live.
 
 ## Supported server implementations
@@ -78,6 +81,7 @@ The Python reference currently documents response mappings such as `PINDATA`, `K
 - [OpenAPI contract](contracts/openapi.yaml)
 - [Language guides](docs/language-guides/README.md)
 - [Security](docs/security.md)
+- [Production readiness assessment](PRODUCTION_READINESS.md)
 - [Compliance](docs/compliance.md)
 - [Repository audit](AUDIT.md)
 - [Implementation plan](IMPLEMENTATION_PLAN.md)
