@@ -148,7 +148,7 @@ class KraClient:
         return resp.status_code, data
 
 
-    async def invoke_catalog_service(self, service_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    async def invoke_catalog_service(\n        self, service_id: str, payload: dict[str, Any], retry_auth: bool = True\n    ) -> dict[str, Any]:
         """Invoke a configured catalog operation without guessing KRA endpoint contracts."""
         paths = json.loads(os.environ.get("KRA_SERVICE_PATHS_JSON", "{}"))
         methods = json.loads(os.environ.get("KRA_SERVICE_METHODS_JSON", "{}"))
