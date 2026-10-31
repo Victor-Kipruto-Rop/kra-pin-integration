@@ -89,3 +89,23 @@ curl -X POST http://localhost:8000/v1/kra/fetch-taxpayer-obligations \\
 ```
 
 Set `KRA_MOCK=false`, `KRA_PIN_CONSUMER_KEY`, `KRA_PIN_CONSUMER_SECRET`, and the mapping JSON from `contracts/kra-service-mappings.template.json`. The request field spelling is case-sensitive. The Postman collection contains no response examples, so response schema, error mapping, authorization scope and live sandbox success remain unverified. Do not infer these from the collection.
+
+
+## Implemented contract: VAT Exemption Checker
+
+The supplied KRA sandbox Postman collection documents:
+
+- OAuth token: `GET https://sbx.kra.go.ke/v1/token/generate?grant_type=client_credentials` using HTTP Basic credentials.
+- Operation: `POST https://sbx.kra.go.ke/dtd/checker/v1/vatexemption` using `Authorization: Bearer <access_token>`.
+- JSON payload: `{ "VatExemptionCertificateNo": "<exemption certificate number>" }`.
+
+The exact property name and casing are `VatExemptionCertificateNo`. The mapping template configures this relative path and POST method. Example proxy invocation:
+
+```bash
+curl -X POST http://localhost:8000/v1/kra/vat-exemption-checker \\
+  -H "X-API-Key: $PROXY_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"consent":true,"payload":{"VatExemptionCertificateNo":"YOUR_SANDBOX_CERTIFICATE_NUMBER"}}'
+```
+
+The collection contains no response examples, so response schema, error mapping, OAuth scope and successful sandbox execution remain unverified. Do not infer them from this request-only collection.
