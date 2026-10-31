@@ -69,11 +69,13 @@ class MemoryIdempotencyStore:
 class RedisIdempotencyStore:
     """Cross-worker idempotency store backed by redis.asyncio."""
 
-    def __init__(self, url: str, ttl_seconds: int = 604800) -> None:
+    def __init__(self, url: str, encryption_key: str, ttl_seconds: int = 604800) -> None:
+        from cryptography.fernet import Fernet
         from redis.asyncio import Redis
 
         self._redis = Redis.from_url(url, decode_responses=True, socket_connect_timeout=3, socket_timeout=3)
         self._ttl = ttl_seconds
+        self._fernet = Fernet(encryption_key.encode("ascii"))
 
     async def reserve(self, key: str, fingerprint: str) -> tuple[str, dict[str, Any] | None]:
         redis_key = f"kra:idempotency:{key}"
@@ -90,14 +92,25 @@ class RedisIdempotencyStore:
             return "pending", None
         try:
             entry = json.loads(raw)
-        except (TypeError, ValueError):
+            if entry.get("fingerprint") != fingerprint:
+                return "conflict", None
+            if entry.get("status") == "complete":
+                encrypted = entry.get("response_encrypted")
+                if not isinstance(encrypted, str):
+                    return "unknown", None
+                response = json.loads(self._fernet.decrypt(encrypted.encode("ascii")))
+                return "complete", response
+            return MemoryIdempotencyStore._interpret(entry, fingerprint)
+        except Exception:
+            # Corrupt or undecryptable state must never permit a duplicate write.
             return "unknown", None
-        return MemoryIdempotencyStore._interpret(entry, fingerprint)
 
     async def complete(self, key: str, fingerprint: str, response: dict[str, Any]) -> None:
+        plaintext = json.dumps(response, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+        encrypted = self._fernet.encrypt(plaintext).decode("ascii")
         value = json.dumps(
-            {"fingerprint": fingerprint, "status": "complete", "response": response},
-            separators=(",", ":"), ensure_ascii=False,
+            {"fingerprint": fingerprint, "status": "complete", "response_encrypted": encrypted},
+            separators=(",", ":"),
         )
         await self._redis.set(f"kra:idempotency:{key}", value, ex=self._ttl)
 
