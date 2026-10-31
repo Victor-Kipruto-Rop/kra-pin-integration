@@ -128,8 +128,8 @@ def main() -> int:
     operation = next((item for item in manifest["operations"] if item["id"] == args.operation), None)
     if operation is None:
         raise SystemExit(f"Unknown operation ID: {args.operation}")
-    if operation.get("mutates") and (not args.idempotency_key or not 16 <= len(args.idempotency_key) <= 128):
-        raise SystemExit("This operation is classified as mutating; provide --idempotency-key (16-128 characters)")
+    if operation.get("mutates") and (not args.change_reference or not 6 <= len(args.change_reference) <= 128):
+        raise SystemExit("This operation is classified as mutating; provide an approval/ticket --change-reference (6-128 characters)")
     if not args.execute or not args.confirm_sandbox:
         print("DRY RUN: payload parsed and operation found. No network request was made.")
         print(f"Operation: {args.operation} ({operation['method']} {operation['path']})")
