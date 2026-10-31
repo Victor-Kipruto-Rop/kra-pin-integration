@@ -7,7 +7,7 @@ KEY = {"X-API-Key": "test-key"}
 class FakeOscu:
     def operation(self, operation_id):
         return {"id": operation_id, "mutates": operation_id == "save-item", "headers": ["tin", "bhfId", "cmcKey", "apigee_app_id"]}
-    async def invoke(self, operation_id, payload, tenant_headers):
+    async def invoke(self, operation_id, payload, tenant_headers, retry_auth=True):
         return {"operation": operation_id, "data": payload}
     async def aclose(self):
         pass
@@ -72,7 +72,7 @@ def test_direct_oscu_unknown_outcome_blocks_same_process_replay():
     class TimeoutOscu(FakeOscu):
         def __init__(self):
             self.calls = 0
-        async def invoke(self, operation_id, payload, tenant_headers):
+        async def invoke(self, operation_id, payload, tenant_headers, retry_auth=True):
             self.calls += 1
             raise KraError(504, "oscu_outcome_unknown", "simulated timeout")
 
@@ -105,7 +105,7 @@ def test_oscu_idempotency_is_scoped_to_tenant_context():
     class CountingOscu(FakeOscu):
         def __init__(self):
             self.calls = 0
-        async def invoke(self, operation_id, payload, tenant_headers):
+        async def invoke(self, operation_id, payload, tenant_headers, retry_auth=True):
             self.calls += 1
             return {"operation": operation_id, "tenant": tenant_headers["tin"], "call": self.calls}
     fake = CountingOscu()
