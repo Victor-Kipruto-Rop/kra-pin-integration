@@ -14,7 +14,7 @@ Do not infer API paths, scopes, request fields, response fields, not-found codes
 | Authorization | `authorization` | Awaiting official specification and sandbox test |
 | PIN Checker by PIN | `pin-checker-by-pin` | Awaiting official specification and sandbox test |
 | PIN Checker BY ID | `pin-checker-by-id` | Awaiting official specification and sandbox test |
-| Fetch Taxpayer Obligations | `fetch-taxpayer-obligations` | Awaiting official specification and sandbox test |
+| Fetch Taxpayer Obligations | `fetch-taxpayer-obligations` | Postman contract supplied; sandbox execution still pending |
 | Know KRA Tax Service Office | `know-kra-tax-service-office` | Awaiting official specification and sandbox test |
 | Tax Compliance Certificate Application | `tax-compliance-certificate-application` | Awaiting official specification and sandbox test |
 | Tax Compliance Certificate Checker | `tax-compliance-certificate-checker` | Awaiting official specification and sandbox test |
