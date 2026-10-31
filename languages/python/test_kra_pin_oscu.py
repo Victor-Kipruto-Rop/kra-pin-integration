@@ -1,4 +1,5 @@
 import pytest
+import httpx
 
 from kra_pin_oscu import DirectOscuClient
 
@@ -39,5 +40,37 @@ def test_initialization_manifest_requires_only_app_id_header():
         operation = instance._operations["oscu-initialization"]
         assert operation["headers"] == ["apigee_app_id"]
         assert operation["mutates"] is True
+    finally:
+        instance.close()
+
+
+@pytest.mark.parametrize(
+    "operation_response",
+    [
+        httpx.Response(503, json={"error": "temporary"}),
+        httpx.Response(200, text="not-json"),
+    ],
+)
+def test_mutation_ambiguous_response_is_marked_unknown(operation_response):
+    import httpx
+
+    def handler(request):
+        if request.url.path == "/v1/token/generate":
+            return httpx.Response(200, json={"access_token": "token", "expires_in": 3600})
+        return operation_response
+
+    instance = DirectOscuClient(
+        "consumer", "secret", "app-id",
+        transport=httpx.MockTransport(handler),
+    )
+    try:
+        with pytest.raises(Exception) as error:
+            instance.invoke(
+                "save-item", {"itemCd": "item-1"},
+                {"tin": "P123", "bhfId": "00", "cmcKey": "x"},
+                confirm_mutation=True,
+            )
+        assert getattr(error.value, "code", None) == "oscu_outcome_unknown"
+        assert getattr(error.value, "outcome_unknown", False) is True
     finally:
         instance.close()
