@@ -117,6 +117,11 @@ The supplied Postman collection also documents **23 direct OSCU sandbox POST ope
 
 The inventory captures the token endpoint, methods, paths and header context. A separate direct-OSCU runtime adapter, formal request/response schemas, approved sandbox tests and applicable certification are still required. The supplied collection contains malformed sample JSON and one malformed sales property; see the integration notes. Never reuse GavaConnect bearer tokens or proxy API keys for the direct OSCU host.
 
+
+### Direct OSCU adapter (Python reference)
+
+The Python server now exposes `POST /v1/etims/oscu/{operation_id}` when `ETIMS_OSCU_ENABLED=true`. Configure the separate sandbox application credentials and app ID in server environment variables; supply tenant context using `X-ETIMS-TIN`, `X-ETIMS-BHF-ID`, and `X-ETIMS-CMC-KEY`. Write operations require an `Idempotency-Key`. This adapter is sandbox-only, separate from GavaConnect, and has not yet been verified against live KRA sandbox credentials. See [direct OSCU integration notes](docs/etims-oscu-direct-integration.md).
+
 ## KRA setup and verification
 
 1. Register at [developer.go.ke](https://developer.go.ke), create the developer application and subscribe to each KRA API your product needs.
