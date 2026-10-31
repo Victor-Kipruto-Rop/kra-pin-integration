@@ -6,7 +6,7 @@ public class Application {
  final boolean mock=Boolean.parseBoolean(System.getenv().getOrDefault("KRA_MOCK","true")),consent=Boolean.parseBoolean(System.getenv().getOrDefault("REQUIRE_CONSENT","true"));
  final RestClient http=RestClient.create();final Map<String,Token> cache=new ConcurrentHashMap<>();final Map<String,ArrayDeque<Instant>> hits=new ConcurrentHashMap<>();
  record Token(String value,Instant expires){} record Body(String pin,String taxpayer_id,String taxpayer_type,Boolean consent){} record Result(boolean found,String pin,String taxpayer_name,String environment,boolean mock,Object raw){}
- public static void main(String[] a){SpringApplication.run(Application.class,a);}
+ public static void main(String[] a){if(System.getenv().getOrDefault("KRA_ENVIRONMENT","sandbox").equals("production")&&Boolean.parseBoolean(System.getenv().getOrDefault("KRA_MOCK","true")))throw new IllegalStateException("Mock mode forbidden in production");if(System.getenv().getOrDefault("PROXY_API_KEYS","").isBlank())throw new IllegalStateException("PROXY_API_KEYS required");SpringApplication.run(Application.class,a);}
  @GetMapping("/health") Map<String,Object> health(){return Map.of("status","ok","environment",env,"mock",mock);}
  @PostMapping("/v1/pin/verify") ResponseEntity<?> pin(@RequestHeader(value="X-API-Key",required=false)String k,@RequestBody Body b){return verify(k,b,false);}
  @PostMapping("/v1/pin/verify-by-id") ResponseEntity<?> byId(@RequestHeader(value="X-API-Key",required=false)String k,@RequestBody Body b){return verify(k,b,true);}
