@@ -75,10 +75,16 @@ class MemoryIdempotencyStore:
 
     async def complete(self, key: str, fingerprint: str, response: dict[str, Any]) -> None:
         async with self._lock:
+            entry = self._entries.get(key)
+            if not entry or entry.get("fingerprint") != fingerprint or entry.get("status") != "pending":
+                raise RuntimeError("idempotency reservation is no longer owned by this request")
             self._entries[key] = {"fingerprint": fingerprint, "status": "complete", "response": response}
 
     async def mark_unknown(self, key: str, fingerprint: str) -> None:
         async with self._lock:
+            entry = self._entries.get(key)
+            if not entry or entry.get("fingerprint") != fingerprint or entry.get("status") != "pending":
+                raise RuntimeError("idempotency reservation is no longer owned by this request")
             self._entries[key] = {"fingerprint": fingerprint, "status": "unknown"}
 
     async def release(self, key: str, fingerprint: str) -> None:
@@ -159,11 +165,35 @@ class RedisIdempotencyStore:
             {"fingerprint": fingerprint, "status": "complete", "response_encrypted": encrypted},
             separators=(",", ":"),
         )
-        await self._redis.set(f"kra:idempotency:{key}", value, ex=self._ttl)
+        script = """
+        local raw = redis.call('GET', KEYS[1])
+        if not raw then return 0 end
+        local ok, current = pcall(cjson.decode, raw)
+        if not ok or current['fingerprint'] ~= ARGV[1] or current['status'] ~= 'pending' then
+          return 0
+        end
+        redis.call('SET', KEYS[1], ARGV[2], 'EX', ARGV[3])
+        return 1
+        """
+        changed = await self._redis.eval(script, 1, f"kra:idempotency:{key}", fingerprint, value, self._ttl)
+        if not changed:
+            raise RuntimeError("idempotency reservation is no longer owned by this request")
 
     async def mark_unknown(self, key: str, fingerprint: str) -> None:
         value = json.dumps({"fingerprint": fingerprint, "status": "unknown"}, separators=(",", ":"))
-        await self._redis.set(f"kra:idempotency:{key}", value, ex=self._ttl)
+        script = """
+        local raw = redis.call('GET', KEYS[1])
+        if not raw then return 0 end
+        local ok, current = pcall(cjson.decode, raw)
+        if not ok or current['fingerprint'] ~= ARGV[1] or current['status'] ~= 'pending' then
+          return 0
+        end
+        redis.call('SET', KEYS[1], ARGV[2], 'EX', ARGV[3])
+        return 1
+        """
+        changed = await self._redis.eval(script, 1, f"kra:idempotency:{key}", fingerprint, value, self._ttl)
+        if not changed:
+            raise RuntimeError("idempotency reservation is no longer owned by this request")
 
     async def release(self, key: str, fingerprint: str) -> None:
         redis_key = f"kra:idempotency:{key}"
