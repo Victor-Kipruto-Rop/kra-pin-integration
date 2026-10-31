@@ -47,7 +47,7 @@ Do not retry these operations with a new idempotency key after an uncertain time
 
 ## Upstream configuration
 
-`KRA_SERVICE_PATHS_JSON` is a JSON object mapping service IDs to exact relative KRA paths. `KRA_SERVICE_METHODS_JSON` optionally maps service IDs to `POST` (must be `POST`). Authorization is handled by the server-side OAuth client-credentials token helper.
+`KRA_SERVICE_PATHS_JSON` is a JSON object mapping service IDs to exact relative KRA paths. `KRA_SERVICE_METHODS_JSON` optionally maps service IDs to `POST` (must be `GET` or `POST`). Authorization is handled by the server-side OAuth client-credentials token helper.
 
 Example shape only — the values below are placeholders, not real KRA paths:
 
