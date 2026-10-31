@@ -82,14 +82,22 @@ public final class DirectOscuClient {
         } catch (IOException ex) {
             if (operation.path("mutates").asBoolean()) throw new UnknownOutcomeException();
             throw ex;
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            if (operation.path("mutates").asBoolean()) throw new UnknownOutcomeException();
+            throw ex;
         }
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            if (operation.path("mutates").asBoolean() && response.statusCode() >= 500) {
+                throw new UnknownOutcomeException();
+            }
             throw new IOException("KRA OSCU rejected request (HTTP " + response.statusCode() + ")");
         }
         if (response.body() == null || response.body().isBlank()) return null;
         try {
             return mapper.readTree(response.body());
         } catch (Exception ex) {
+            if (operation.path("mutates").asBoolean()) throw new UnknownOutcomeException();
             throw new IOException("KRA OSCU returned a non-JSON response");
         }
     }
