@@ -114,7 +114,10 @@ func (c *Client) Invoke(ctx context.Context, operationID string, payload map[str
 	req.Header.Set("Authorization", "Bearer "+token)
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return nil, &OscuError{Code: "oscu_outcome_unknown", Message: "KRA OSCU request failed after submission; reconcile before resubmitting", OutcomeUnknown: op.Mutates}
+		if op.Mutates {
+			return nil, &OscuError{Code: "oscu_outcome_unknown", Message: "KRA OSCU request outcome is unknown; reconcile before resubmitting", OutcomeUnknown: true}
+		}
+		return nil, &OscuError{Code: "oscu_upstream_unreachable", Message: "Could not reach KRA OSCU"}
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
