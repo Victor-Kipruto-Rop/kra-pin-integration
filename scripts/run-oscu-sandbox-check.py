@@ -30,7 +30,7 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--operation", required=True, help="Stable operation ID from the direct OSCU manifest")
     result.add_argument("--payload", required=True, type=Path, help="Path to a locally prepared JSON object")
     result.add_argument("--output", type=Path, help="Evidence JSON path; defaults to artifacts/oscu-evidence/")
-    result.add_argument("--idempotency-key", help="Required for operations marked mutating")
+    result.add_argument("--change-reference", help="Required approval/ticket reference for operations marked mutating; not sent to KRA")
     result.add_argument("--execute", action="store_true", help="Allow a real outbound sandbox request")
     result.add_argument("--confirm-sandbox", action="store_true", help="Explicitly confirm this is an approved sandbox test")
     return result
@@ -98,7 +98,7 @@ async def execute(args: argparse.Namespace, payload: dict, env: dict[str, str], 
         payload=payload,
         response=result.get("data"),
         tenant_context=context,
-        idempotency_key=args.idempotency_key,
+        change_reference=args.change_reference,
         timestamp=datetime.now(timezone.utc).isoformat(),
     )
 
