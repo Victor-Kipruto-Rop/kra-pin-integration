@@ -61,11 +61,19 @@ final class DirectOscuClient
             throw new RuntimeException('Could not reach KRA OSCU', 0, $error);
         }
         if ($response['status'] < 200 || $response['status'] >= 300) {
+            if (($operation['mutates'] ?? false) && $response['status'] >= 500) {
+                throw new OscuUnknownOutcomeException('KRA OSCU returned a server error; reconcile before resubmitting');
+            }
             throw new RuntimeException('KRA OSCU rejected request (HTTP ' . $response['status'] . ')');
         }
         if (trim($response['body']) === '') return null;
         try { return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR); }
-        catch (\JsonException $error) { throw new RuntimeException('KRA OSCU returned non-JSON content', 0, $error); }
+        catch (\JsonException $error) {
+            if ($operation['mutates'] ?? false) {
+                throw new OscuUnknownOutcomeException('KRA OSCU returned an invalid response; reconcile before resubmitting', 0, $error);
+            }
+            throw new RuntimeException('KRA OSCU returned non-JSON content', 0, $error);
+        }
     }
 
     private function accessToken(): string
