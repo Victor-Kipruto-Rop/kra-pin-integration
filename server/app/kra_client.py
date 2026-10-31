@@ -159,8 +159,10 @@ class KraClient:
         if not isinstance(path, str) or not path.startswith("/") or path.startswith("//"):
             raise KraError(501, "service_not_configured", "No verified KRA endpoint mapping configured")
         method = str(methods.get(service_id, "POST")).upper()
-        if method != "POST":
-            raise KraError(501, "method_not_supported", "Catalog operations currently require POST; configure the official KRA method before use")
+        if method not in {"GET", "POST"}:
+            raise KraError(501, "method_not_supported", "Only GET and POST are supported by the adapter")
+        if method == "GET" and service_id in {"tax-compliance-certificate-application", "nil-return-filing", "tot-return-filing", "income-tax-withholding-prn-generation", "vat-withholding-prn-generation", "rental-withholding-prn-generation", "etims-oscu-integrator-automated-testing"}:
+            raise KraError(501, "unsafe_http_method", "Mutating catalog services cannot use GET")
         upstream_base = self._s.base_url
         if service_id == "etims-oscu-integrator-automated-testing":
             upstream_base = os.environ.get("KRA_ETIMS_BASE_URL", "")
@@ -170,7 +172,7 @@ class KraClient:
         credentials = (self._s.pin_key, self._s.pin_secret)
         async def send(token: str) -> httpx.Response:
             url = f"{upstream_base.rstrip('/')}{path}"
-            return await self._http.request(method, url, json=payload,
+            return await self._http.request(method, url, params=payload if method == "GET" else None, json=payload if method == "POST" else None,
                 headers={"Authorization": f"Bearer {token}"})
         token = await self._token(*credentials)
         try:
