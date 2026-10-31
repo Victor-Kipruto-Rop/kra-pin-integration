@@ -103,3 +103,18 @@ def test_unsafe_configuration_refuses_to_start(overrides):
 
 def test_local_dev_can_run_unauthenticated():
     validate_settings(Settings(mock=True, allow_unauthenticated=True))
+
+@pytest.mark.parametrize('service_id', [
+    'authorization','pin-checker-by-pin','pin-checker-by-id','fetch-taxpayer-obligations',
+    'know-kra-tax-service-office','tax-compliance-certificate-application',
+    'tax-compliance-certificate-checker','vat-exemption-checker','it-exemption-checker',
+    'nil-return-filing','tot-return-filing','income-tax-withholding-prn-generation',
+    'vat-withholding-prn-generation','rental-withholding-prn-generation',
+    'excise-license-checker-by-pin','excise-license-checker-by-certificate-number',
+    'customs-declaration-status-checker','customs-tax-calculator','import-certificate-checker-by-pin',
+    'import-certificate-checker-by-cert-number','invoice-checker','etims-oscu-integrator-automated-testing',
+])
+def test_all_catalog_routes_are_registered_in_mock_mode(client, service_id):
+    response = client.post(f'/v1/kra/{service_id}', json={'consent': True, 'payload': {}}, headers=KEY)
+    assert response.status_code == 501
+    assert 'mock' in response.text.lower() or 'mapping' in response.text.lower()
