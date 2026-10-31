@@ -11,7 +11,7 @@ def test_evidence_contains_hashes_and_shape_but_not_sensitive_values():
         payload=payload,
         response=response,
         tenant_context=context,
-        idempotency_key=None,
+        change_reference=None,
         timestamp="2026-11-01T00:00:00+00:00",
     )
     serialized = str(evidence)
