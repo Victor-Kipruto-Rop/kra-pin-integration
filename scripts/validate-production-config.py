@@ -6,6 +6,8 @@ prove API subscription, validate schemas, or replace sandbox/certification tests
 """
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import os
 import sys
@@ -28,6 +30,27 @@ def validate(env: dict[str, str]) -> list[str]:
     for name in ("KRA_PIN_CONSUMER_KEY", "KRA_PIN_CONSUMER_SECRET", "PROXY_API_KEYS"):
         if not env.get(name, "").strip():
             errors.append(f"{name} must be configured")
+    redis_url = env.get("IDEMPOTENCY_REDIS_URL", "").strip()
+    if not redis_url:
+        errors.append("IDEMPOTENCY_REDIS_URL must be configured")
+    else:
+        parsed_redis = urlparse(redis_url)
+        if parsed_redis.scheme != "rediss" or not parsed_redis.hostname:
+            errors.append("IDEMPOTENCY_REDIS_URL must be a valid rediss:// TLS URL")
+    encryption_key = env.get("IDEMPOTENCY_ENCRYPTION_KEY", "").strip()
+    if not encryption_key:
+        errors.append("IDEMPOTENCY_ENCRYPTION_KEY must be configured")
+    else:
+        try:
+            if len(base64.urlsafe_b64decode(encryption_key.encode("ascii"))) != 32:
+                errors.append("IDEMPOTENCY_ENCRYPTION_KEY must decode to 32 bytes")
+        except (ValueError, UnicodeEncodeError, binascii.Error):
+            errors.append("IDEMPOTENCY_ENCRYPTION_KEY must be a valid URL-safe base64 Fernet key")
+    try:
+        if int(env.get("IDEMPOTENCY_TTL_SECONDS", "604800")) < 3600:
+            errors.append("IDEMPOTENCY_TTL_SECONDS must be at least 3600")
+    except ValueError:
+        errors.append("IDEMPOTENCY_TTL_SECONDS must be an integer")
     try:
         paths = json.loads(env.get("KRA_SERVICE_PATHS_JSON", "{}"))
         methods = json.loads(env.get("KRA_SERVICE_METHODS_JSON", "{}"))
