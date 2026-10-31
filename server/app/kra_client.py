@@ -102,19 +102,19 @@ class KraClient:
                     auth=(key, secret),
                 )
             except httpx.TimeoutException as exc:
-                raise KraError(504, "upstream_timeout", "KRA token endpoint timed out") from exc
+                raise KraError(504, "token_timeout", "KRA token endpoint timed out") from exc
             except httpx.HTTPError as exc:
-                raise KraError(502, "upstream_unreachable", "Could not reach KRA") from exc
+                raise KraError(502, "token_unreachable", "Could not reach KRA") from exc
             if resp.status_code in (400, 401, 403):
                 raise KraError(502, "upstream_auth_failed", "KRA rejected the configured credentials")
             if resp.status_code >= 400:
-                raise KraError(502, "upstream_error", f"KRA token endpoint returned {resp.status_code}")
+                raise KraError(502, "token_error", f"KRA token endpoint returned {resp.status_code}")
             try:
                 body = resp.json()
                 token = body["access_token"]
                 ttl = int(body.get("expires_in", 3600))
             except (ValueError, KeyError, TypeError) as exc:
-                raise KraError(502, "unexpected_response", "Malformed KRA token response") from exc
+                raise KraError(502, "token_unexpected_response", "Malformed KRA token response") from exc
             self._tokens[key] = (token, time.monotonic() + ttl)
             return token
 
