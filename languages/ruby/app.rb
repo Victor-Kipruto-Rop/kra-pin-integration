@@ -52,7 +52,7 @@ class KraPinApp
   return reply(422,{detail:'payload must be a JSON object'}) unless body['payload'].is_a?(Hash)
   idem=req.get_header('HTTP_IDEMPOTENCY_KEY');return reply(400,{detail:'Idempotency-Key (16-128 chars) is required'}) if mutates&&(idem.nil?||idem.length<16||idem.length>128)
   ik=idem ? Digest::SHA256.hexdigest("#{key}:#{id}:#{idem}") : nil
-  fingerprint=Digest::SHA256.hexdigest(JSON.generate(body['payload']))
+  fingerprint=Digest::SHA256.hexdigest(JSON.generate(canonicalize(body['payload'])))
   cached=@mutex.synchronize{@idempotency[ik]} if ik
   if cached
    return reply(409,{error:{code:'idempotency_conflict',message:'Idempotency-Key was already used with a different payload'}}) unless cached[:fingerprint]==fingerprint
@@ -82,6 +82,7 @@ class KraPinApp
   Net::HTTP.start(uri.hostname,uri.port,use_ssl:true,open_timeout:5,read_timeout:20){|http|http.request(request)}
  end
 
+ def canonicalize(value);case value;when Hash;value.keys.sort.each_with_object({}){|key,out|out[key]=canonicalize(value[key])};when Array;value.map{|item|canonicalize(item)};else;value;end;end
  def reply(status,data);[status,{'content-type'=>'application/json'},[JSON.generate(data)]];end
  def secure_equal(a,b);OpenSSL.fixed_length_secure_compare(a,b);rescue;false;end
  def rate(key);@mutex.synchronize{now=Time.now.to_f;q=(@hits[key]||[]).select{|t|now-t<60};return false if q.size>=30;q<<now;@hits[key]=q;true};end
