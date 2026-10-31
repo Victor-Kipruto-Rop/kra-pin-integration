@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from urllib.parse import urlparse
 
 SANDBOX_URL = "https://sbx.kra.go.ke"
 PRODUCTION_URL = "https://api.kra.go.ke"
@@ -108,6 +109,30 @@ def validate_settings(s: Settings) -> None:
         )
     if s.allow_unauthenticated and s.environment == "production":
         problems.append("ALLOW_UNAUTHENTICATED cannot be enabled in production")
+    if s.timeout_seconds <= 0:
+        problems.append("KRA_TIMEOUT_SECONDS must be greater than zero")
+    if s.rate_limit_per_minute < 1:
+        problems.append("RATE_LIMIT_PER_MINUTE must be at least 1")
+    if s.idempotency_ttl_seconds < 3600:
+        problems.append("IDEMPOTENCY_TTL_SECONDS must be at least 3600")
+    if s.environment == "production" and not s.idempotency_redis_url:
+        problems.append("IDEMPOTENCY_REDIS_URL is required in production for cross-worker replay protection")
+    if s.environment == "production" and not s.idempotency_encryption_key:
+        problems.append("IDEMPOTENCY_ENCRYPTION_KEY is required in production to encrypt cached KRA responses")
+    if s.idempotency_redis_url:
+        parsed_redis = urlparse(s.idempotency_redis_url)
+        if parsed_redis.scheme not in {"redis", "rediss"} or not parsed_redis.hostname:
+            problems.append("IDEMPOTENCY_REDIS_URL must be a valid redis:// or rediss:// URL")
+        if s.environment == "production" and parsed_redis.scheme != "rediss":
+            problems.append("Production IDEMPOTENCY_REDIS_URL must use rediss:// TLS")
+        if not s.idempotency_encryption_key:
+            problems.append("IDEMPOTENCY_ENCRYPTION_KEY is required when Redis idempotency storage is enabled")
+        else:
+            try:
+                from cryptography.fernet import Fernet
+                Fernet(s.idempotency_encryption_key.encode("ascii"))
+            except (ValueError, UnicodeEncodeError):
+                problems.append("IDEMPOTENCY_ENCRYPTION_KEY must be a valid Fernet key")
     if s.etims_oscu_enabled:
         if s.environment != "sandbox":
             problems.append("Direct eTIMS OSCU is sandbox-only until KRA provides production endpoint details and approval")
