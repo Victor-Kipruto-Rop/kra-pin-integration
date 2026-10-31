@@ -149,3 +149,7 @@ The PIN-specific legacy routes still contain example response mappings such as `
 - [Feature parity](FEATURE_PARITY.md)
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md). MIT license.
+
+## CI options
+
+The repository includes GitHub Actions and a `.gitlab-ci.yml` pipeline. If GitHub Actions runner availability or billing prevents jobs from starting, import or mirror this repository into GitLab and use the included pipeline to run catalog validation and all seven language test suites. The GitLab pipeline has not been executed from this ChatGPT session; it must be run in your GitLab project before treating CI as passed.
