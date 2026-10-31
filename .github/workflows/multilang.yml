@@ -2,9 +2,9 @@ name: Multi-language CI
 on:
   workflow_dispatch:
   push:
-    paths: ['server/**','languages/**','contracts/**','.github/workflows/multilang.yml']
+    paths: ['server/**','languages/**','contracts/**','scripts/**','.github/workflows/multilang.yml']
   pull_request:
-    paths: ['languages/**','contracts/**','.github/workflows/multilang.yml']
+    paths: ['server/**','languages/**','contracts/**','scripts/**','.github/workflows/multilang.yml']
 permissions:
   contents: read
 concurrency:
