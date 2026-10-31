@@ -45,6 +45,8 @@ class Settings:
     etims_oscu_consumer_key: str = ""
     etims_oscu_consumer_secret: str = ""
     etims_oscu_app_id: str = ""
+    idempotency_redis_url: str = ""
+    idempotency_ttl_seconds: int = 604800
 
     @property
     def base_url(self) -> str:
@@ -81,6 +83,8 @@ def load_settings() -> Settings:
         etims_oscu_consumer_key=os.environ.get("ETIMS_OSCU_CONSUMER_KEY", ""),
         etims_oscu_consumer_secret=os.environ.get("ETIMS_OSCU_CONSUMER_SECRET", ""),
         etims_oscu_app_id=os.environ.get("ETIMS_OSCU_APP_ID", ""),
+        idempotency_redis_url=os.environ.get("IDEMPOTENCY_REDIS_URL", ""),
+        idempotency_ttl_seconds=int(os.environ.get("IDEMPOTENCY_TTL_SECONDS", "604800")),
     )
 
 
