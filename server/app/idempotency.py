@@ -16,6 +16,7 @@ class Store(Protocol):
     async def complete(self, key: str, fingerprint: str, response: dict[str, Any]) -> None: ...
     async def mark_unknown(self, key: str, fingerprint: str) -> None: ...
     async def release(self, key: str, fingerprint: str) -> None: ...
+    async def ping(self) -> None: ...
     async def aclose(self) -> None: ...
 
 
@@ -57,6 +58,9 @@ class MemoryIdempotencyStore:
             entry = self._entries.get(key)
             if entry and entry.get("fingerprint") == fingerprint and entry.get("status") == "pending":
                 self._entries.pop(key, None)
+
+    async def ping(self) -> None:
+        return None
 
     async def aclose(self) -> None:
         return None
@@ -113,6 +117,9 @@ class RedisIdempotencyStore:
         return 0
         """
         await self._redis.eval(script, 1, redis_key, fingerprint)
+
+    async def ping(self) -> None:
+        await self._redis.ping()
 
     async def aclose(self) -> None:
         await self._redis.aclose()
