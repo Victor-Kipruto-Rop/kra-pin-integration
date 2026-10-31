@@ -1,7 +1,7 @@
 import pytest
 import httpx
 
-from kra_pin_oscu import DirectOscuClient
+from kra_pin_oscu import DirectOscuClient, OscuError
 
 
 def client():
@@ -52,7 +52,6 @@ def test_initialization_manifest_requires_only_app_id_header():
     ],
 )
 def test_mutation_ambiguous_response_is_marked_unknown(operation_response):
-    import httpx
 
     def handler(request):
         if request.url.path == "/v1/token/generate":
@@ -64,13 +63,13 @@ def test_mutation_ambiguous_response_is_marked_unknown(operation_response):
         transport=httpx.MockTransport(handler),
     )
     try:
-        with pytest.raises(Exception) as error:
+        with pytest.raises(OscuError) as error:
             instance.invoke(
                 "save-item", {"itemCd": "item-1"},
                 {"tin": "P123", "bhfId": "00", "cmcKey": "x"},
                 confirm_mutation=True,
             )
-        assert getattr(error.value, "code", None) == "oscu_outcome_unknown"
-        assert getattr(error.value, "outcome_unknown", False) is True
+        assert error.value.code == "oscu_outcome_unknown"
+        assert error.value.outcome_unknown is True
     finally:
         instance.close()
