@@ -35,7 +35,7 @@ final class KraService {
  }
  public function invokeCatalog(string $service,array $payload):array {
   $key=getenv('KRA_PIN_CONSUMER_KEY')?:'';$secret=getenv('KRA_PIN_CONSUMER_SECRET')?:'';
-  if($service==='authorization')return [200,['access_token'=>$this->token($key,$secret),'token_type'=>'Bearer']];
+  if($service==='authorization'){$this->token($key,$secret);return [200,['authorized'=>true,'token_type'=>'Bearer']];}
   $path=$this->servicePaths[$service]??null;
   if(!is_string($path)||!str_starts_with($path,'/')||str_starts_with($path,'//'))return [501,['error'=>['code'=>'service_not_configured','message'=>'No verified KRA endpoint mapping configured']]];
   $method=strtoupper($this->serviceMethods[$service]??'POST');
