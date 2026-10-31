@@ -1,6 +1,6 @@
 {
   "title": "KRA direct eTIMS OSCU sandbox endpoints",
-  "status": "inventory only; adapter and sandbox verification pending",
+  "status": "sandbox adapter implemented; contract and live KRA verification pending",
   "base_url": "https://sbx.kra.go.ke/etims-oscu/api/v1",
   "token": {
     "method": "GET",
@@ -29,7 +29,8 @@
         "apigee_app_id"
       ],
       "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
-      "response_schema_status": "not supplied"
+      "response_schema_status": "not supplied",
+      "mutates": true
     },
     {
       "id": "branch-user-account",
@@ -42,7 +43,8 @@
         "apigee_app_id"
       ],
       "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
-      "response_schema_status": "not supplied"
+      "response_schema_status": "not supplied",
+      "mutates": true
     },
     {
       "id": "branch-send-customer-information",
@@ -55,7 +57,8 @@
         "apigee_app_id"
       ],
       "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
-      "response_schema_status": "not supplied"
+      "response_schema_status": "not supplied",
+      "mutates": true
     },
     {
       "id": "branch-list",
@@ -68,7 +71,8 @@
         "apigee_app_id"
       ],
       "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
-      "response_schema_status": "not supplied"
+      "response_schema_status": "not supplied",
+      "mutates": false
     },
     {
       "id": "select-code-list",
@@ -81,7 +85,8 @@
         "apigee_app_id"
       ],
       "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
-      "response_schema_status": "not supplied"
+      "response_schema_status": "not supplied",
+      "mutates": false
     },
     {
       "id": "customer-pin-info",
@@ -94,7 +99,8 @@
         "apigee_app_id"
       ],
       "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
-      "response_schema_status": "not supplied"
+      "response_schema_status": "not supplied",
+      "mutates": false
     },
     {
       "id": "select-item-classification",
@@ -107,7 +113,8 @@
         "apigee_app_id"
       ],
       "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
-      "response_schema_status": "not supplied"
+      "response_schema_status": "not supplied",
+      "mutates": false
     },
     {
       "id": "select-taxpayer-information",
@@ -120,7 +127,8 @@
         "apigee_app_id"
       ],
       "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
-      "response_schema_status": "not supplied"
+      "response_schema_status": "not supplied",
+      "mutates": false
     },
     {
       "id": "select-notice-list",
@@ -133,7 +141,8 @@
         "apigee_app_id"
       ],
       "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
-      "response_schema_status": "not supplied"
+      "response_schema_status": "not supplied",
+      "mutates": false
     },
     {
       "id": "imported-item-information",
@@ -146,7 +155,8 @@
         "apigee_app_id"
       ],
       "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
-      "response_schema_status": "not supplied"
+      "response_schema_status": "not supplied",
+      "mutates": false
     },
     {
       "id": "imported-item-converted-information",
@@ -159,7 +169,8 @@
         "apigee_app_id"
       ],
       "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
-      "response_schema_status": "not supplied"
+      "response_schema_status": "not supplied",
+      "mutates": true
     },
     {
       "id": "oscu-initialization",
@@ -169,7 +180,8 @@
         "apigee_app_id"
       ],
       "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
-      "response_schema_status": "not supplied"
+      "response_schema_status": "not supplied",
+      "mutates": true
     },
     {
       "id": "item-information",
@@ -182,7 +194,8 @@
         "apigee_app_id"
       ],
       "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
-      "response_schema_status": "not supplied"
+      "response_schema_status": "not supplied",
+      "mutates": false
     },
     {
       "id": "save-item-composition",
@@ -195,7 +208,8 @@
         "apigee_app_id"
       ],
       "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
-      "response_schema_status": "not supplied"
+      "response_schema_status": "not supplied",
+      "mutates": true
     },
     {
       "id": "save-item",
@@ -208,7 +222,8 @@
         "apigee_app_id"
       ],
       "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
-      "response_schema_status": "not supplied"
+      "response_schema_status": "not supplied",
+      "mutates": true
     },
     {
       "id": "get-purchase-transaction-information",
@@ -221,7 +236,8 @@
         "apigee_app_id"
       ],
       "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
-      "response_schema_status": "not supplied"
+      "response_schema_status": "not supplied",
+      "mutates": false
     },
     {
       "id": "send-purchase-transaction-information",
@@ -234,7 +250,8 @@
         "apigee_app_id"
       ],
       "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
-      "response_schema_status": "not supplied"
+      "response_schema_status": "not supplied",
+      "mutates": true
     },
     {
       "id": "send-sales-transaction",
@@ -247,7 +264,8 @@
         "apigee_app_id"
       ],
       "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
-      "response_schema_status": "not supplied"
+      "response_schema_status": "not supplied",
+      "mutates": true
     },
     {
       "id": "select-invoice-detail",
@@ -260,7 +278,8 @@
         "apigee_app_id"
       ],
       "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
-      "response_schema_status": "not supplied"
+      "response_schema_status": "not supplied",
+      "mutates": false
     },
     {
       "id": "select-sales-transactions",
@@ -273,7 +292,8 @@
         "apigee_app_id"
       ],
       "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
-      "response_schema_status": "not supplied"
+      "response_schema_status": "not supplied",
+      "mutates": false
     },
     {
       "id": "insert-stock-io",
@@ -286,7 +306,8 @@
         "apigee_app_id"
       ],
       "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
-      "response_schema_status": "not supplied"
+      "response_schema_status": "not supplied",
+      "mutates": true
     },
     {
       "id": "save-stock-master",
@@ -299,7 +320,8 @@
         "apigee_app_id"
       ],
       "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
-      "response_schema_status": "not supplied"
+      "response_schema_status": "not supplied",
+      "mutates": true
     },
     {
       "id": "select-stock-move-lists",
@@ -312,7 +334,8 @@
         "apigee_app_id"
       ],
       "request_schema_status": "fields transcribed from supplied Postman example; formal validation schema pending",
-      "response_schema_status": "not supplied"
+      "response_schema_status": "not supplied",
+      "mutates": false
     }
   ],
   "known_issues": [
