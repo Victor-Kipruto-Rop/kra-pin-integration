@@ -6,7 +6,7 @@ export const services={
 const servicePaths=JSON.parse(process.env.KRA_SERVICE_PATHS_JSON||'{}'),serviceMethods=JSON.parse(process.env.KRA_SERVICE_METHODS_JSON||'{}');
 const etimsBase=process.env.KRA_ETIMS_BASE_URL||'';
 
-function buildServiceUrl(base,path,payload,method){const u=new URL(base.replace(/\\/+$/,'')+path);if(method==='GET')for(const [key,value] of Object.entries(payload)){if(value!==null&&typeof value==='object')throw Error('GET query parameters must be scalar');if(value!==null)u.searchParams.set(key,String(value));}return u.toString();}
+function buildServiceUrl(base,path,payload,method){const u=new URL(base.replace(/\/+$/,'')+path);if(method==='GET')for(const [key,value] of Object.entries(payload)){if(value!==null&&typeof value==='object')throw Error('GET query parameters must be scalar');if(value!==null)u.searchParams.set(key,String(value));}return u.toString();}
 function stableJson(value){if(Array.isArray(value))return '['+value.map(stableJson).join(',')+']';if(value&&typeof value==='object')return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+stableJson(value[k])).join(',')+'}';return JSON.stringify(value);}
 const send=(r,s,d)=>{r.writeHead(s,{'content-type':'application/json'});r.end(JSON.stringify(d));};
 const auth=k=>!!k&&keys.some(v=>Buffer.byteLength(v)===Buffer.byteLength(k)&&timingSafeEqual(Buffer.from(v),Buffer.from(k)));
