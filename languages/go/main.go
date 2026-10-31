@@ -24,7 +24,7 @@ type Config struct {
  Paths, Methods map[string]string
 }
 type Token struct { Value string; Expires time.Time }
-type CachedResponse struct { Status int; Body any }
+type CachedResponse struct { Status int; Body any; Fingerprint string }
 var tokenCache=struct{sync.Mutex; m map[string]Token}{m:map[string]Token{}}
 var idemCache=struct{sync.Mutex; m map[string]CachedResponse}{m:map[string]CachedResponse{}}
 var serviceMutates=map[string]bool{
@@ -86,10 +86,10 @@ func serviceHandler(c Config,client *http.Client,limiter *Limiter) http.HandlerF
   var body struct{Consent bool `json:"consent"`;Payload map[string]any `json:"payload"`};if json.Unmarshal(bodyBytes,&body)!=nil{write(w,422,map[string]string{"detail":"Invalid JSON"});return}
   if c.Consent&&!body.Consent{write(w,400,map[string]string{"detail":"consent must be true"});return};if body.Payload==nil{write(w,422,map[string]string{"detail":"payload must be a JSON object"});return}
   idem:=r.Header.Get("Idempotency-Key");if mutates&&(len(idem)<16||len(idem)>128){write(w,400,map[string]string{"detail":"Idempotency-Key (16-128 chars) is required"});return}
-  idemKey:="";if idem!=""{sum:=sha256.Sum256([]byte(key+":"+service+":"+idem));idemKey=hex.EncodeToString(sum[:]);idemCache.Lock();cached,exists:=idemCache.m[idemKey];idemCache.Unlock();if exists{write(w,cached.Status,cached.Body);return}}
+  idemKey:="";fingerprintBytes,_:=json.Marshal(body.Payload);fingerprintSum:=sha256.Sum256(fingerprintBytes);fingerprint:=hex.EncodeToString(fingerprintSum[:]);if idem!=""{sum:=sha256.Sum256([]byte(key+":"+service+":"+idem));idemKey=hex.EncodeToString(sum[:]);idemCache.Lock();cached,exists:=idemCache.m[idemKey];idemCache.Unlock();if exists{if cached.Fingerprint!=fingerprint{write(w,409,map[string]string{"code":"idempotency_conflict","message":"Idempotency-Key was already used with a different payload"});return};write(w,cached.Status,cached.Body);return}}
   if c.Mock{write(w,501,map[string]string{"code":"mock_service_not_implemented","message":"No fabricated mock response; configure verified KRA sandbox mapping"});return}
   status,data,err:=invoke(c,client,service,body.Payload);if err!=nil{write(w,502,map[string]string{"code":"upstream_error","message":"KRA service request failed"});return}
-  if idemKey!=""&&status==200{idemCache.Lock();idemCache.m[idemKey]=CachedResponse{status,data};idemCache.Unlock()};write(w,status,data)
+  if idemKey!=""&&status==200{idemCache.Lock();idemCache.m[idemKey]=CachedResponse{Status:status,Body:data,Fingerprint:fingerprint};idemCache.Unlock()};write(w,status,data)
  }
 }
 func main(){
