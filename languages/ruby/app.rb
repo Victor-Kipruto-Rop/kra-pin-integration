@@ -6,6 +6,20 @@ require 'base64'
 require 'openssl'
 require 'thread'
 require 'digest'
+
+SERVICE_MUTATES = {
+ 'authorization'=>false,'pin-checker-by-pin'=>false,'pin-checker-by-id'=>false,
+ 'fetch-taxpayer-obligations'=>false,'know-kra-tax-service-office'=>false,
+ 'tax-compliance-certificate-application'=>true,'tax-compliance-certificate-checker'=>false,
+ 'vat-exemption-checker'=>false,'it-exemption-checker'=>false,'nil-return-filing'=>true,
+ 'tot-return-filing'=>true,'income-tax-withholding-prn-generation'=>true,
+ 'vat-withholding-prn-generation'=>true,'rental-withholding-prn-generation'=>true,
+ 'excise-license-checker-by-pin'=>false,'excise-license-checker-by-certificate-number'=>false,
+ 'customs-declaration-status-checker'=>false,'customs-tax-calculator'=>false,
+ 'import-certificate-checker-by-pin'=>false,'import-certificate-checker-by-cert-number'=>false,
+ 'invoice-checker'=>false,'etims-oscu-integrator-automated-testing'=>true
+}.freeze
+
 class KraPinApp
  def initialize
   @env=ENV.fetch('KRA_ENVIRONMENT','sandbox');raise 'KRA_ENVIRONMENT must be sandbox or production' unless ['sandbox','production'].include?(@env);@mock=ENV.fetch('KRA_MOCK','true')=='true';raise 'Mock mode forbidden in production' if @mock&&@env=='production';raise 'KRA credentials required when mock mode is disabled' if !@mock&&(ENV.fetch('KRA_PIN_CONSUMER_KEY','').empty?||ENV.fetch('KRA_PIN_CONSUMER_SECRET','').empty?)
