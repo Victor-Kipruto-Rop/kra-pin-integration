@@ -18,7 +18,7 @@ catalog-contract:
   script:
     - python scripts/validate-catalog.py
     - python scripts/validate-oscu-contract.py
-    - python -m py_compile scripts/validate-catalog.py scripts/validate-oscu-contract.py scripts/validate-production-config.py scripts/summarize-junit.py scripts/run-oscu-sandbox-check.py server/app/idempotency.py
+    - python -m py_compile scripts/validate-catalog.py scripts/validate-oscu-contract.py scripts/validate-production-config.py scripts/summarize-junit.py scripts/run-oscu-sandbox-check.py server/app/idempotency.py languages/python/kra_pin_oscu.py
 python-tests:
   stage: test
   image: python:3.12-slim
@@ -27,13 +27,14 @@ python-tests:
     paths: [.cache/pip]
   script:
     - pip install -r server/requirements-dev.txt
-    - cd server && ruff check . && mkdir -p reports && PYTHONPATH=. pytest -q --junitxml=reports/python-junit.xml
+    - pip install -r languages/python/requirements.txt
+    - cd server && ruff check . && mkdir -p reports && PYTHONPATH=. pytest -q --junitxml=reports/python-junit.xml && PYTHONPATH=../languages/python pytest -q ../languages/python --junitxml=reports/python-oscu-sdk-junit.xml
   artifacts:
     when: always
     reports:
-      junit: server/reports/python-junit.xml
+      junit: server/reports/*.xml
     paths:
-      - server/reports/python-junit.xml
+      - server/reports/*.xml
     expire_in: 14 days
 go-tests:
   stage: test
