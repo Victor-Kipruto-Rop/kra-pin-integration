@@ -22,6 +22,8 @@ def create_app(settings: Settings | None = None, client=None) -> FastAPI:
     settings = settings or load_settings()
     validate_settings(settings)
     limiter = RateLimiter(settings.rate_limit_per_minute)
+    idempotency_cache: dict[str, dict] = {}
+    service_mutates = {"authorization": False, "pin-checker-by-pin": False, "pin-checker-by-id": False, "fetch-taxpayer-obligations": False, "know-kra-tax-service-office": False, "tax-compliance-certificate-application": True, "tax-compliance-certificate-checker": False, "vat-exemption-checker": False, "it-exemption-checker": False, "nil-return-filing": True, "tot-return-filing": True, "income-tax-withholding-prn-generation": True, "vat-withholding-prn-generation": True, "rental-withholding-prn-generation": True, "excise-license-checker-by-pin": False, "excise-license-checker-by-certificate-number": False, "customs-declaration-status-checker": False, "customs-tax-calculator": False, "import-certificate-checker-by-pin": False, "import-certificate-checker-by-cert-number": False, "invoice-checker": False, "etims-oscu-integrator-automated-testing": True}
     kra = client or (MockKraClient() if settings.mock else KraClient(settings))
 
     @asynccontextmanager
@@ -103,5 +105,42 @@ def create_app(settings: Settings | None = None, client=None) -> FastAPI:
         result = await kra.check_pin_by_id(body.taxpayer_id, body.taxpayer_type.upper())
         log.info("pin_by_id found=%s caller=%s", result.found, identity)  # never log the ID
         return to_response(result)
+
+
+    @app.post("/v1/kra/{service_id}", tags=["kra-services"])
+    async def invoke_kra_service(
+        service_id: str,
+        body: dict,
+        identity: str = Depends(guard),
+        idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    ) -> dict:
+        if service_id not in service_mutates:
+            raise HTTPException(status_code=404, detail="Unknown KRA service")
+        if body.get("consent") is not True:
+            raise HTTPException(status_code=400, detail="consent must be true")
+        payload = body.get("payload")
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=422, detail="payload must be a JSON object")
+        if service_mutates[service_id] and (
+            not idempotency_key or not 16 <= len(idempotency_key) <= 128
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Idempotency-Key (16-128 chars) is required for this operation",
+            )
+        cache_key = hashlib.sha256(
+            f"{identity}:{service_id}:{idempotency_key}".encode()
+        ).hexdigest() if idempotency_key else None
+        if cache_key and cache_key in idempotency_cache:
+            return idempotency_cache[cache_key]
+        if settings.mock:
+            raise HTTPException(
+                status_code=501,
+                detail="No fabricated filing/payment mock exists; configure a verified KRA sandbox mapping",
+            )
+        result = await kra.invoke_catalog_service(service_id, payload)
+        if cache_key:
+            idempotency_cache[cache_key] = result
+        return result
 
     return app
