@@ -37,6 +37,7 @@ services:
       - /tmp
     networks:
       - kra_private
+      - kra_egress
 
 volumes:
   kra_redis_data:
@@ -44,3 +45,5 @@ volumes:
 networks:
   kra_private:
     internal: true
+  kra_egress:
+    driver: bridge
