@@ -15,6 +15,7 @@ import asyncio
 import json
 import os
 import time
+from urllib.parse import urlparse
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -159,9 +160,16 @@ class KraClient:
         method = str(methods.get(service_id, "POST")).upper()
         if method not in {"GET", "POST"}:
             raise KraError(500, "invalid_service_configuration", "Only GET and POST mappings are supported")
+        upstream_base = self._s.base_url
+        if service_id == "etims-oscu-integrator-automated-testing":
+            upstream_base = os.environ.get("KRA_ETIMS_BASE_URL", "")
+        parsed = urlparse(upstream_base)
+        if parsed.scheme != "https" or not parsed.hostname or not parsed.hostname.endswith(".kra.go.ke"):
+            raise KraError(501, "service_base_not_configured", "Set a verified HTTPS KRA base URL for this service")
         credentials = (self._s.pin_key, self._s.pin_secret)
         async def send(token: str) -> httpx.Response:
-            return await self._http.request(method, path, json=payload if method == "POST" else None,
+            url = f"{upstream_base.rstrip('/')}{path}"
+            return await self._http.request(method, url, json=payload if method == "POST" else None,
                 headers={"Authorization": f"Bearer {token}"})
         token = await self._token(*credentials)
         try:
