@@ -14,15 +14,18 @@ def canonical_sha256(value: Any) -> str:
 
 
 def response_shape(value: Any, depth: int = 0) -> dict[str, Any]:
-    """Describe response structure without retaining response values."""
+    """Describe response structure without retaining values or object keys.
+
+    Object keys can themselves contain taxpayer identifiers in map-shaped API
+    responses, so evidence records only key counts and anonymous child shapes.
+    """
     if isinstance(value, dict):
-        keys = sorted(str(key) for key in value.keys())
-        result: dict[str, Any] = {"type": "object", "keys": keys[:50], "key_count": len(keys)}
+        result: dict[str, Any] = {"type": "object", "key_count": len(value)}
         if depth < 2:
-            result["fields"] = {
-                str(key): response_shape(item, depth + 1)
-                for key, item in list(value.items())[:50]
-            }
+            result["field_shapes"] = [
+                response_shape(item, depth + 1)
+                for _, item in sorted(value.items(), key=lambda pair: str(pair[0]))[:50]
+            ]
         return result
     if isinstance(value, list):
         result = {"type": "array", "length": len(value)}
@@ -62,7 +65,7 @@ def build_evidence(
         "outcome": "success",
         "request": {
             "payload_sha256": canonical_sha256(payload),
-            "payload_top_level_keys": sorted(payload.keys())[:50],
+            "payload_top_level_key_count": len(payload),
         },
         "tenant_context": {
             "tin_present": bool(tenant_context.get("tin")),
@@ -80,5 +83,6 @@ def build_evidence(
             "credentials_stored": False,
             "tenant_identifiers_stored": False,
             "authorization_headers_stored": False,
+            "object_keys_stored": False,
         },
     }
