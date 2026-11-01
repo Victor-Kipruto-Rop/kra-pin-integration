@@ -20,7 +20,13 @@ The script installs the declared test dependencies and runs, in order:
 6. TypeScript compilation and tests.
 7. PHP PHPUnit tests and PHP syntax checks.
 8. Ruby/RSpec tests and Ruby syntax checks.
-9. Docker Compose configuration validation when Docker is installed.
+9. Docker Compose configuration validation when Docker is installed. The runner supplies
+   non-secret interpolation values for this syntax check; it never writes them to `.env`
+   or uses them for an application connection.
+
+The runner continues through independent runtime stages when a local runtime is missing,
+then exits non-zero with an unavailable-runtime and failure summary. This prevents one
+missing SDK toolchain from hiding results from the other runtimes.
 
 ### Windows (PowerShell + Git Bash)
 
@@ -38,7 +44,9 @@ The repository `.gitattributes` keeps shell and CI files on LF line endings. If 
 git checkout -- scripts/ci-local.sh
 ```
 
-If Python is installed from python.org but Git Bash resolves `python3` to the Microsoft Store execution alias, prepend a directory containing a `python3` symlink to the installed `python.exe` for that Git Bash session, or disable the Windows Python execution alias and ensure the Python install directory is on PATH. Do not modify project scripts to work around a machine-specific PATH issue.
+The runner probes `python3`, `python`, and `py`, rejecting a Windows Store
+execution alias that cannot execute. Ensure a real Python 3.10+ installation
+is on PATH; no machine-specific path changes are required in the repository.
 
 Use `bash scripts/ci-local.sh --skip-install` when dependencies are already installed. Use `bash scripts/ci-local.sh --validation-only` for static contract and syntax checks only; this is not a substitute for the full matrix.
 
