@@ -42,7 +42,7 @@ async function invokeService(req:http.IncomingMessage,res:http.ServerResponse,id
   let tok=await token(ck,cs);
   submitted=true;
   let response=await fetch(target,{method,headers:{authorization:'Bearer '+tok,'content-type':'application/json'},...(method==='POST'?{body:JSON.stringify(body.payload)}:{}),signal:AbortSignal.timeout(20000)});
-  if(response.status===401&&!services[id]){cache.delete(ck);tok=await token(ck,cs);submitted=true;response=await fetch(target,{method,headers:{authorization:'Bearer '+tok,'content-type':'application/json'},...(method==='POST'?{body:JSON.stringify(body.payload)}:{}),signal:AbortSignal.timeout(20000)});}
+  if(response.status===401){cache.delete(ck);if(!services[id]){tok=await token(ck,cs);submitted=true;response=await fetch(target,{method,headers:{authorization:'Bearer '+tok,'content-type':'application/json'},...(method==='POST'?{body:JSON.stringify(body.payload)}:{}),signal:AbortSignal.timeout(20000)});}}
   const raw=await response.text();let data:any;try{data=raw?JSON.parse(raw):{};}catch{
    if(idemKey)idempotency.set(idemKey,{fingerprint,state:'unknown'});
    return send(res,502,{error:{code:'invalid_upstream_response',message:'KRA returned non-JSON content'}});
