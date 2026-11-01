@@ -86,3 +86,12 @@ Do not merge as production-ready or deploy real taxpayer data until all release 
 - Full seven-runtime tests remain unexecuted; no language-level change in this section is considered verified until the local matrix or GitLab CI completes successfully.
 
 - Python GavaConnect and direct OSCU token-acquisition failures now use distinct error codes from operation-request failures. This avoids incorrectly marking an idempotency key unknown when authentication failed before the mutating request was submitted.
+
+
+## Generic catalog dispatcher mutation safety
+
+- The Python reference API and all six additional catalog server templates now disable automatic 401 replay for mutating services.
+- Go, Java, JavaScript, TypeScript, PHP and Ruby catalog handlers now reserve idempotency keys before sending mutations, return conflict responses for pending/unknown keys, replay completed results, and block resubmission after ambiguous failures.
+- The PHP adapter persists pending/unknown/complete state in a local lock-protected file; the other independent templates use process-local maps. None of these local mechanisms provides cross-host durability.
+- Added end-to-end unknown-outcome regression tests for Go, JavaScript, TypeScript and Ruby. Equivalent HTTP-level tests for Java and PHP remain outstanding; the Python API tests cover the Redis/in-memory reference implementation.
+- Token acquisition and endpoint preflight occur before or are distinguished from the submitted operation where practical. Where a language adapter cannot reliably prove whether a transport failure occurred before or after submission, it conservatively blocks the key as unknown.
