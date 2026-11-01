@@ -15,3 +15,19 @@ The Python reference server exposes `POST /v1/etims/oscu/{operation_id}` when `E
 The adapter has its own token cache and uses only the documented sandbox host. Production is blocked because the supplied collection contains no production host or approval evidence. Eleven write operations require an idempotency key; successful responses and unknown outcomes are cached in process memory only. Use Redis or a database for multi-worker deployments.
 
 The adapter accepts object payloads because formal request schemas and response examples were not supplied. A timeout on a write is treated as an unknown outcome; reconcile with KRA before attempting another submission. No live sandbox request or KRA certification is claimed.
+
+
+## Seven-language SDKs and OpenAPI
+
+Server-side direct OSCU clients are now provided in Python, Go, Java, JavaScript, TypeScript, PHP and Ruby. Each client uses the fixed sandbox token/operation hosts and the packaged 23-operation manifest. Mutating operations require an explicit local confirmation flag; clients do not automatically retry submitted mutations. This confirmation is a safety interlock, not a KRA idempotency guarantee. A language-neutral OpenAPI description is available at [contracts/etims-oscu-openapi.yaml](../contracts/etims-oscu-openapi.yaml). CI checks the seven packaged manifest copies against the canonical inventory.
+
+No formal field-level request or response schemas have been supplied for all operations. The SDKs therefore accept JSON objects without pretending to validate KRA's undocumented field contracts. Mutation classifications remain provisional until KRA confirms them. None of these SDKs has been certified by KRA or validated with live credentials in this implementation work.
+
+
+## Important endpoint and certification clarification
+
+The 23-operation collection above is the supplied product-specific sandbox collection. Its host `sbx.kra.go.ke/etims-oscu/api/v1` and token route are recorded from that collection and have **not** been independently confirmed as the standard KRA OSCU device API. Do not substitute one host for the other or infer that the collection alone proves certification.
+
+KRA's published OSCU Specification v2.0 describes the test eTIMS API server as `https://etims-api-sbx.kra.go.ke/etims-api/` and the production server as `https://etims-api.kra.go.ke/etims-api/`. KRA also describes OSCU/VSCU as system-to-system integration options and requires development, testing, vetting and certification before a third-party integration commences operation. See the official [OSCU specification](https://www.kra.go.ke/images/publications/OSCU_Specification_Document_v2.0.pdf), [KRA system-to-system integration guidance](https://www.kra.go.ke/business/etims-electronic-tax-invoice-management-system/learn-about-etims/etims-system-to-system-integration), and [eTIMS taxpayer integration guidance](https://etims.kra.go.ke/main/signup/indexLearnMore).
+
+**Required action before live use:** obtain written confirmation from KRA eTIMS technical support that the supplied 23-operation collection, its base URL, authentication exchange, operation paths and credentials are valid for the specific GavaConnect/OSCU automated-testing product being implemented. Keep this collection sandbox-only until that confirmation and approved credentials are available. Never point it at the standard production OSCU host by changing only the base URL.

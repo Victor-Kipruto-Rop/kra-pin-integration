@@ -1,0 +1,22 @@
+# Keep repository text files predictable across Windows, Git Bash, WSL and Linux.
+* text=auto
+
+# Shell and CI entrypoints must use LF; CRLF can break shebangs and strict bash options.
+*.sh text eol=lf
+*.bash text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+Makefile text eol=lf
+
+# Keep source/configuration files normalized while preserving platform-native behavior.
+*.py text eol=lf
+*.rb text eol=lf
+*.go text eol=lf
+*.java text eol=lf
+*.js text eol=lf
+*.ts text eol=lf
+*.php text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+*.xml text eol=lf
+*.md text eol=lf

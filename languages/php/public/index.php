@@ -26,9 +26,33 @@ if($isCatalog){
  $idem=$_SERVER['HTTP_IDEMPOTENCY_KEY']??'';if(in_array($serviceId,$mutating,true)&&(strlen($idem)<16||strlen($idem)>128)){http_response_code(400);echo json_encode(['detail'=>'Idempotency-Key (16-128 chars) is required']);exit;}
  $idemKey=$idem!==''?hash('sha256',$key.':'.$serviceId.':'.$idem):'';
  if($mock){http_response_code(501);echo json_encode(['error'=>['code'=>'mock_service_not_implemented','message'=>'Configure a verified KRA sandbox mapping; no filing or payment mock is fabricated']]);exit;}
- $canonicalize=function($value)use(&$canonicalize){if(!is_array($value))return $value;if(array_is_list($value))return array_map($canonicalize,$value);ksort($value);foreach($value as $key=>$item)$value[$key]=$canonicalize($item);return $value;};$fingerprint=hash('sha256',json_encode($canonicalize($body['payload']),JSON_THROW_ON_ERROR));$idemHandle=null;if($idemKey!==''){$idemFile=sys_get_temp_dir().'/kra-idem-'.$idemKey;$idemHandle=fopen($idemFile,'c+');if($idemHandle===false){http_response_code(503);echo json_encode(['detail'=>'Idempotency store unavailable']);exit;}flock($idemHandle,LOCK_EX);$cachedRaw=stream_get_contents($idemHandle);$cached=$cachedRaw!==''?json_decode($cachedRaw,true):null;if(is_array($cached)) {flock($idemHandle,LOCK_UN);fclose($idemHandle);if(($cached['fingerprint']??null)!==$fingerprint){http_response_code(409);echo json_encode(['error'=>['code'=>'idempotency_conflict','message'=>'Idempotency-Key was already used with a different payload']]);exit;}echo json_encode($cached['data']??[]);exit;}}
- try{$service=new KraPin\KraService($env,false);[$status,$result]=$service->invokeCatalog($serviceId,$body['payload']);if($status===200&&$idemHandle!==null){ftruncate($idemHandle,0);rewind($idemHandle);fwrite($idemHandle,json_encode(['fingerprint'=>$fingerprint,'data'=>$result],JSON_THROW_ON_ERROR));fflush($idemHandle);}if($idemHandle!==null){flock($idemHandle,LOCK_UN);fclose($idemHandle);}http_response_code($status);echo json_encode($result,JSON_THROW_ON_ERROR);exit;}
- catch(Throwable $e){if($idemHandle!==null){flock($idemHandle,LOCK_UN);fclose($idemHandle);}http_response_code(502);echo json_encode(['error'=>['code'=>'upstream_error','message'=>'KRA service request failed']]);exit;}
+ $canonicalize=function($value)use(&$canonicalize){if(!is_array($value))return $value;if(array_is_list($value))return array_map($canonicalize,$value);ksort($value);foreach($value as $key=>$item)$value[$key]=$canonicalize($item);return $value;};$fingerprint=hash('sha256',json_encode($canonicalize($body['payload']),JSON_THROW_ON_ERROR));$idemHandle=null;
+ if($idemKey!==''){
+  $idemFile=sys_get_temp_dir().'/kra-idem-'.$idemKey;$idemHandle=fopen($idemFile,'c+');if($idemHandle===false){http_response_code(503);echo json_encode(['detail'=>'Idempotency store unavailable']);exit;}
+  flock($idemHandle,LOCK_EX);$cachedRaw=stream_get_contents($idemHandle);$cached=$cachedRaw!==''?json_decode($cachedRaw,true):null;
+  if($cachedRaw!==''&&!is_array($cached)){flock($idemHandle,LOCK_UN);fclose($idemHandle);http_response_code(503);echo json_encode(['detail'=>'Idempotency state is unreadable; reconcile before retrying']);exit;}
+  if(is_array($cached)){
+   if(($cached['fingerprint']??null)!==$fingerprint){flock($idemHandle,LOCK_UN);fclose($idemHandle);http_response_code(409);echo json_encode(['error'=>['code'=>'idempotency_conflict','message'=>'Idempotency-Key was already used with a different payload']]);exit;}
+   $state=$cached['state']??'complete';
+   if($state==='complete'){flock($idemHandle,LOCK_UN);fclose($idemHandle);echo json_encode($cached['data']??[]);exit;}
+   if($state!=='complete'){flock($idemHandle,LOCK_UN);fclose($idemHandle);http_response_code(409);echo json_encode(['error'=>['code'=>'idempotency_outcome_unknown','message'=>'Previous request outcome is unknown; reconcile with KRA before retrying']]);exit;}
+  }
+  ftruncate($idemHandle,0);rewind($idemHandle);fwrite($idemHandle,json_encode(['fingerprint'=>$fingerprint,'state'=>'pending'],JSON_THROW_ON_ERROR));fflush($idemHandle);
+ }
+ try{
+  $service=new KraPin\KraService($env,false);[$status,$result]=$service->invokeCatalog($serviceId,$body['payload']);
+  if($idemHandle!==null){
+   if($status===200){$record=['fingerprint'=>$fingerprint,'state'=>'complete','data'=>$result];}
+   elseif($status>=500){$record=['fingerprint'=>$fingerprint,'state'=>'unknown'];}
+   else{$record=null;}
+   ftruncate($idemHandle,0);rewind($idemHandle);if($record!==null)fwrite($idemHandle,json_encode($record,JSON_THROW_ON_ERROR));fflush($idemHandle);
+   flock($idemHandle,LOCK_UN);fclose($idemHandle);
+  }
+  http_response_code($status);echo json_encode($result,JSON_THROW_ON_ERROR);exit;
+ }catch(Throwable $e){
+  if($idemHandle!==null){ftruncate($idemHandle,0);rewind($idemHandle);fwrite($idemHandle,json_encode(['fingerprint'=>$fingerprint,'state'=>'unknown'],JSON_THROW_ON_ERROR));fflush($idemHandle);flock($idemHandle,LOCK_UN);fclose($idemHandle);}
+  http_response_code(502);echo json_encode(['error'=>['code'=>'upstream_error','message'=>'KRA service request failed']]);exit;
+ }
 }
 
 $rawBody=file_get_contents('php://input',false,null,0,65537);if(strlen($rawBody)>65536){http_response_code(413);echo json_encode(['detail'=>'Request too large']);exit;}

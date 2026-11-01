@@ -9,15 +9,16 @@ KRA's success/not-found response bodies are parsed defensively. Confirm the exac
 field names against your sandbox with scripts/probe_sandbox.py and adjust the
 constants below if needed.
 """
+
 from __future__ import annotations
 
 import asyncio
 import json
 import os
 import time
-from urllib.parse import urlparse
 from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 
@@ -73,9 +74,7 @@ def parse_pin_response(status: int, data: dict) -> PinResult:
         return PinResult(True, _first(record, _PIN_KEYS), _first(record, _NAME_KEYS), data)
     if status == 404 or (code is not None and code in NOT_FOUND_CODES):
         return PinResult(False, None, None, data)
-    raise KraError(
-        502, "unexpected_response", f"KRA returned an unexpected response (HTTP {status})", data
-    )
+    raise KraError(502, "unexpected_response", f"KRA returned an unexpected response (HTTP {status})", data)
 
 
 class KraClient:
@@ -102,19 +101,19 @@ class KraClient:
                     auth=(key, secret),
                 )
             except httpx.TimeoutException as exc:
-                raise KraError(504, "upstream_timeout", "KRA token endpoint timed out") from exc
+                raise KraError(504, "token_timeout", "KRA token endpoint timed out") from exc
             except httpx.HTTPError as exc:
-                raise KraError(502, "upstream_unreachable", "Could not reach KRA") from exc
+                raise KraError(502, "token_unreachable", "Could not reach KRA") from exc
             if resp.status_code in (400, 401, 403):
                 raise KraError(502, "upstream_auth_failed", "KRA rejected the configured credentials")
             if resp.status_code >= 400:
-                raise KraError(502, "upstream_error", f"KRA token endpoint returned {resp.status_code}")
+                raise KraError(502, "token_error", f"KRA token endpoint returned {resp.status_code}")
             try:
                 body = resp.json()
                 token = body["access_token"]
                 ttl = int(body.get("expires_in", 3600))
             except (ValueError, KeyError, TypeError) as exc:
-                raise KraError(502, "unexpected_response", "Malformed KRA token response") from exc
+                raise KraError(502, "token_unexpected_response", "Malformed KRA token response") from exc
             self._tokens[key] = (token, time.monotonic() + ttl)
             return token
 
@@ -123,9 +122,7 @@ class KraClient:
     ) -> tuple[int, dict]:
         token = await self._token(*creds)
         try:
-            resp = await self._http.post(
-                path, json=payload, headers={"Authorization": f"Bearer {token}"}
-            )
+            resp = await self._http.post(path, json=payload, headers={"Authorization": f"Bearer {token}"})
         except httpx.TimeoutException as exc:
             raise KraError(504, "upstream_timeout", "KRA timed out") from exc
         except httpx.HTTPError as exc:
@@ -147,8 +144,9 @@ class KraClient:
             raise KraError(502, "unexpected_response", "KRA returned an unexpected JSON shape")
         return resp.status_code, data
 
-
-    async def invoke_catalog_service(self, service_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    async def invoke_catalog_service(
+        self, service_id: str, payload: dict[str, Any], retry_auth: bool = True
+    ) -> dict[str, Any]:
         """Invoke a configured catalog operation without guessing KRA endpoint contracts."""
         paths = json.loads(os.environ.get("KRA_SERVICE_PATHS_JSON", "{}"))
         methods = json.loads(os.environ.get("KRA_SERVICE_METHODS_JSON", "{}"))
@@ -161,26 +159,44 @@ class KraClient:
         method = str(methods.get(service_id, "POST")).upper()
         if method not in {"GET", "POST"}:
             raise KraError(501, "method_not_supported", "Only GET and POST are supported by the adapter")
-        if method == "GET" and service_id in {"tax-compliance-certificate-application", "nil-return-filing", "tot-return-filing", "income-tax-withholding-prn-generation", "vat-withholding-prn-generation", "rental-withholding-prn-generation", "etims-oscu-integrator-automated-testing"}:
+        if method == "GET" and service_id in {
+            "tax-compliance-certificate-application",
+            "nil-return-filing",
+            "tot-return-filing",
+            "income-tax-withholding-prn-generation",
+            "vat-withholding-prn-generation",
+            "rental-withholding-prn-generation",
+            "etims-oscu-integrator-automated-testing",
+        }:
             raise KraError(501, "unsafe_http_method", "Mutating catalog services cannot use GET")
         # All 22 catalog routes use the configured GavaConnect base URL.
         # Direct OSCU protocol traffic requires a separate certified adapter.
         upstream_base = self._s.base_url
         parsed = urlparse(upstream_base)
         if parsed.scheme != "https" or not parsed.hostname or not parsed.hostname.endswith(".kra.go.ke"):
-            raise KraError(501, "service_base_not_configured", "Set a verified HTTPS KRA base URL for this service")
+            raise KraError(
+                501, "service_base_not_configured", "Set a verified HTTPS KRA base URL for this service"
+            )
         credentials = (self._s.pin_key, self._s.pin_secret)
+
         async def send(token: str) -> httpx.Response:
             url = f"{upstream_base.rstrip('/')}{path}"
-            return await self._http.request(method, url, params=payload if method == "GET" else None, json=payload if method == "POST" else None,
-                headers={"Authorization": f"Bearer {token}"})
+            return await self._http.request(
+                method,
+                url,
+                params=payload if method == "GET" else None,
+                json=payload if method == "POST" else None,
+                headers={"Authorization": f"Bearer {token}"},
+            )
+
         token = await self._token(*credentials)
         try:
             response = await send(token)
             if response.status_code == 401:
                 self._tokens.pop(credentials[0], None)
-                token = await self._token(*credentials)
-                response = await send(token)
+                if retry_auth:
+                    token = await self._token(*credentials)
+                    response = await send(token)
         except httpx.TimeoutException as exc:
             raise KraError(504, "upstream_timeout", "KRA service timed out") from exc
         except httpx.HTTPError as exc:

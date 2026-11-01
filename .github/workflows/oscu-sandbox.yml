@@ -1,0 +1,95 @@
+name: KRA OSCU sandbox validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Stable operation ID from the OSCU manifest
+        required: true
+        type: string
+      payload_path:
+        description: Repository path to an approved JSON fixture under sandbox-fixtures/
+        required: true
+        type: string
+      change_reference:
+        description: Approval or test-ticket reference (required for mutating operations)
+        required: false
+        type: string
+      confirm_sandbox:
+        description: Confirm this is an authorized KRA sandbox request
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kra-oscu-sandbox
+  cancel-in-progress: false
+
+jobs:
+  execute-one-approved-operation:
+    if: ${{ inputs.confirm_sandbox }}
+    runs-on: ubuntu-latest
+    environment:
+      name: kra-sandbox
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate fixture path and JSON
+        env:
+          PAYLOAD_PATH: ${{ inputs.payload_path }}
+        run: |
+          set -euo pipefail
+          python - "$PAYLOAD_PATH" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          fixture_root = Path("sandbox-fixtures").resolve()
+          fixture = Path(sys.argv[1]).resolve(strict=True)
+          if not fixture.is_relative_to(fixture_root) or fixture.suffix != ".json":
+              raise SystemExit("Payload must resolve to a JSON file inside sandbox-fixtures/")
+          json.loads(fixture.read_text(encoding="utf-8"))
+          PY
+      - name: Install runtime dependencies
+        run: python -m pip install -r server/requirements.txt
+      - name: Execute one confirmed sandbox operation
+        env:
+          ETIMS_OSCU_ENABLED: "true"
+          ETIMS_OSCU_CONSUMER_KEY: ${{ secrets.ETIMS_OSCU_CONSUMER_KEY }}
+          ETIMS_OSCU_CONSUMER_SECRET: ${{ secrets.ETIMS_OSCU_CONSUMER_SECRET }}
+          ETIMS_OSCU_APP_ID: ${{ secrets.ETIMS_OSCU_APP_ID }}
+          ETIMS_OSCU_TIN: ${{ secrets.ETIMS_OSCU_TIN }}
+          ETIMS_OSCU_BHF_ID: ${{ secrets.ETIMS_OSCU_BHF_ID }}
+          ETIMS_OSCU_CMC_KEY: ${{ secrets.ETIMS_OSCU_CMC_KEY }}
+          OPERATION: ${{ inputs.operation }}
+          PAYLOAD_PATH: ${{ inputs.payload_path }}
+          CHANGE_REFERENCE: ${{ inputs.change_reference }}
+        run: |
+          set -euo pipefail
+          args=(--operation "$OPERATION" --payload "$PAYLOAD_PATH" --execute --confirm-sandbox)
+          if [[ -n "$CHANGE_REFERENCE" ]]; then
+            args+=(--change-reference "$CHANGE_REFERENCE")
+          fi
+          python scripts/run-oscu-sandbox-check.py "${args[@]}"
+      - name: Upload redacted evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oscu-sandbox-evidence-${{ github.run_id }}
+          path: artifacts/oscu-evidence/*.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+  require-explicit-confirmation:
+    if: ${{ !inputs.confirm_sandbox }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "No KRA request was made. Re-run manually and explicitly confirm the sandbox operation."
+          exit 1

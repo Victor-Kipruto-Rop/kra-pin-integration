@@ -25,21 +25,41 @@ async function invokeService(req,res,id,k){
  if(services[id]&&(!idem||idem.length<16||idem.length>128))return send(res,400,{detail:'Idempotency-Key (16-128 chars) is required for this operation'});
  const idemKey=idem?createHash('sha256').update(k+':'+id+':'+idem).digest('hex'):null;
  const fingerprint=createHash('sha256').update(stableJson(body.payload)).digest('hex');
- if(idemKey&&idempotency.has(idemKey)){const prior=idempotency.get(idemKey);if(prior.fingerprint!==fingerprint)return send(res,409,{error:{code:'idempotency_conflict',message:'Idempotency-Key was already used with a different payload'}});return send(res,200,prior.data);}
+ if(idemKey&&idempotency.has(idemKey)){
+  const prior=idempotency.get(idemKey);
+  if(prior.fingerprint!==fingerprint)return send(res,409,{error:{code:'idempotency_conflict',message:'Idempotency-Key was already used with a different payload'}});
+  if(prior.state==='unknown')return send(res,409,{error:{code:'idempotency_outcome_unknown',message:'Previous request outcome is unknown; reconcile with KRA before retrying'}});
+  if(prior.state==='pending')return send(res,409,{error:{code:'idempotency_in_progress',message:'A request with this Idempotency-Key is already in progress'}});
+  if(prior.state==='complete')return send(res,200,prior.data);
+ }
  if(mock)return send(res,501,{error:{code:'mock_service_not_implemented',message:'This service has no fabricated mock response; configure a verified KRA sandbox mapping'}});
  const ck=process.env.KRA_PIN_CONSUMER_KEY,cs=process.env.KRA_PIN_CONSUMER_SECRET;
  if(id==='authorization'){try{await token(ck,cs);return send(res,200,{authorized:true,token_type:'Bearer'});}catch{return send(res,502,{error:{code:'authorization_failed',message:'KRA authorization failed'}});}}
  const path=servicePaths[id];if(typeof path!=='string'||!path.startsWith('/')||path.startsWith('//'))return send(res,501,{error:{code:'service_not_configured',message:'No verified KRA endpoint mapping configured for this service'}});
  const method=String(serviceMethods[id]||'POST').toUpperCase();if(!['GET','POST'].includes(method)||(method==='GET'&&services[id]))return send(res,501,{detail:'Unsupported or unsafe configured HTTP method'});
  const upstreamBase=base;try{const u=new URL(upstreamBase);if(u.protocol!=='https:'||!u.hostname.endsWith('.kra.go.ke'))throw Error('invalid host');}catch{return send(res,501,{error:{code:'service_base_not_configured',message:'Set a verified HTTPS KRA base URL for this service'}});}
+ let target;try{target=buildServiceUrl(upstreamBase,path,body.payload,method);}catch{return send(res,422,{detail:'GET query payload values must be scalar'});}
+ if(idemKey)idempotency.set(idemKey,{fingerprint,state:'pending'});
+ let submitted=false;
  try{
-  let target;try{target=buildServiceUrl(upstreamBase,path,body.payload,method);}catch{return send(res,422,{detail:'GET query payload values must be scalar'});}
-  let tok=await token(ck,cs),response=await fetch(target,{method,headers:{authorization:'Bearer '+tok,'content-type':'application/json'},...(method==='POST'?{body:JSON.stringify(body.payload)}:{}),signal:AbortSignal.timeout(20000)});
-  if(response.status===401){cache.delete(ck);tok=await token(ck,cs);response=await fetch(target,{method,headers:{authorization:'Bearer '+tok,'content-type':'application/json'},...(method==='POST'?{body:JSON.stringify(body.payload)}:{}),signal:AbortSignal.timeout(20000)});}
-  const raw=await response.text();let data;try{data=raw?JSON.parse(raw):{};}catch{return send(res,502,{error:{code:'invalid_upstream_response',message:'KRA returned non-JSON content'}});}
-  if(!response.ok)return send(res,response.status===429?429:502,{error:{code:'kra_upstream_error',message:'KRA service request failed',upstream_status:response.status}});
-  if(idemKey)idempotency.set(idemKey,{fingerprint,data});return send(res,200,data);
- }catch{return send(res,502,{error:{code:'upstream_error',message:'KRA service request failed'}});}
+  let tok=await token(ck,cs);
+  submitted=true;
+  let response=await fetch(target,{method,headers:{authorization:'Bearer '+tok,'content-type':'application/json'},...(method==='POST'?{body:JSON.stringify(body.payload)}:{}),signal:AbortSignal.timeout(20000)});
+  if(response.status===401){cache.delete(ck);if(!services[id]){tok=await token(ck,cs);submitted=true;response=await fetch(target,{method,headers:{authorization:'Bearer '+tok,'content-type':'application/json'},...(method==='POST'?{body:JSON.stringify(body.payload)}:{}),signal:AbortSignal.timeout(20000)});}}
+  const raw=await response.text();let data;try{data=raw?JSON.parse(raw):{};}catch{
+   if(idemKey)idempotency.set(idemKey,{fingerprint,state:'unknown'});
+   return send(res,502,{error:{code:'invalid_upstream_response',message:'KRA returned non-JSON content'}});
+  }
+  if(!response.ok){
+   if(idemKey){if(response.status>=500)idempotency.set(idemKey,{fingerprint,state:'unknown'});else idempotency.delete(idemKey);}
+   return send(res,response.status===429?429:502,{error:{code:'kra_upstream_error',message:'KRA service request failed',upstream_status:response.status}});
+  }
+  if(idemKey)idempotency.set(idemKey,{fingerprint,state:'complete',data});
+  return send(res,200,data);
+ }catch{
+  if(idemKey){if(submitted)idempotency.set(idemKey,{fingerprint,state:'unknown'});else idempotency.delete(idemKey);}
+  return send(res,502,{error:{code:'upstream_error',message:'KRA service request failed'}});
+ }
 }
 
 export const server=http.createServer(async(req,res)=>{if(req.method==='GET'&&req.url==='/health')return send(res,200,{status:'ok',environment:env,mock,services:Object.keys(services).length});let k=req.headers['x-api-key'];if(req.method==='POST'&&req.url?.startsWith('/v1/kra/')){if(!auth(k))return send(res,401,{detail:'Invalid or missing X-API-Key'});let caller=createHash('sha256').update(k).digest('hex').slice(0,16);if(!rate(caller))return send(res,429,{detail:'Rate limit exceeded'});return invokeService(req,res,decodeURIComponent(req.url.slice('/v1/kra/'.length)),k);}if(req.method!=='POST'||!['/v1/pin/verify','/v1/pin/verify-by-id'].includes(req.url))return send(res,404,{detail:'Not found'});if(!auth(k))return send(res,401,{detail:'Invalid or missing X-API-Key'});let id=createHash('sha256').update(k).digest('hex').slice(0,16);if(!rate(id))return send(res,429,{detail:'Rate limit exceeded'});try{let b=await read(req),byId=req.url.endsWith('verify-by-id');if(consent&&b.consent!==true)return send(res,400,{detail:'consent must be true'});let v=String(byId?b.taxpayer_id||'':b.pin||'').trim().toUpperCase();if(v.length<(byId?5:9)||v.length>20||!/^[A-Z0-9]+$/.test(v))return send(res,422,{detail:'Invalid identifier format'});return send(res,200,await lookup(byId,v,String(b.taxpayer_type||'KE').toUpperCase()));}catch(e){if(e?.status===413)return send(res,413,{detail:'Request too large'});if(e instanceof SyntaxError)return send(res,422,{detail:'Invalid JSON'});return send(res,502,{error:{code:'upstream_error',message:'KRA request failed'}});}});

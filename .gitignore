@@ -5,3 +5,19 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .DS_Store
+
+# Local taxpayer/device fixtures and redacted sandbox evidence
+private-fixtures/
+artifacts/oscu-evidence/
+
+# Language build outputs and local dependencies
+.env.*
+!.env.example
+node_modules/
+dist/
+target/
+vendor/
+.bundle/
+coverage/
+server/reports/
+ci-test-summary.md

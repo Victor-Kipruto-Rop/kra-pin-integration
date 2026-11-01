@@ -61,9 +61,7 @@ def test_strict_format_rejects_bad_pin():
 
 
 def test_verify_by_id(client):
-    r = client.post(
-        "/v1/pin/verify-by-id", json={"taxpayer_id": "00000000", "consent": True}, headers=KEY
-    )
+    r = client.post("/v1/pin/verify-by-id", json={"taxpayer_id": "00000000", "consent": True}, headers=KEY)
     assert r.status_code == 200 and r.json()["found"] is True
 
 
@@ -104,39 +102,342 @@ def test_unsafe_configuration_refuses_to_start(overrides):
 def test_local_dev_can_run_unauthenticated():
     validate_settings(Settings(mock=True, allow_unauthenticated=True))
 
-@pytest.mark.parametrize('service_id', [
-    'authorization','pin-checker-by-pin','pin-checker-by-id','fetch-taxpayer-obligations',
-    'know-kra-tax-service-office','tax-compliance-certificate-application',
-    'tax-compliance-certificate-checker','vat-exemption-checker','it-exemption-checker',
-    'nil-return-filing','tot-return-filing','income-tax-withholding-prn-generation',
-    'vat-withholding-prn-generation','rental-withholding-prn-generation',
-    'excise-license-checker-by-pin','excise-license-checker-by-certificate-number',
-    'customs-declaration-status-checker','customs-tax-calculator','import-certificate-checker-by-pin',
-    'import-certificate-checker-by-cert-number','invoice-checker','etims-oscu-integrator-automated-testing',
-])
+
+@pytest.mark.parametrize(
+    "service_id",
+    [
+        "authorization",
+        "pin-checker-by-pin",
+        "pin-checker-by-id",
+        "fetch-taxpayer-obligations",
+        "know-kra-tax-service-office",
+        "tax-compliance-certificate-application",
+        "tax-compliance-certificate-checker",
+        "vat-exemption-checker",
+        "it-exemption-checker",
+        "nil-return-filing",
+        "tot-return-filing",
+        "income-tax-withholding-prn-generation",
+        "vat-withholding-prn-generation",
+        "rental-withholding-prn-generation",
+        "excise-license-checker-by-pin",
+        "excise-license-checker-by-certificate-number",
+        "customs-declaration-status-checker",
+        "customs-tax-calculator",
+        "import-certificate-checker-by-pin",
+        "import-certificate-checker-by-cert-number",
+        "invoice-checker",
+        "etims-oscu-integrator-automated-testing",
+    ],
+)
 def test_all_catalog_routes_are_registered_in_mock_mode(client, service_id):
-    response = client.post(f'/v1/kra/{service_id}', json={'consent': True, 'payload': {}}, headers={**KEY, 'Idempotency-Key': 'test-idempotency-key-0001'})
+    response = client.post(
+        f"/v1/kra/{service_id}",
+        json={"consent": True, "payload": {}},
+        headers={**KEY, "Idempotency-Key": "test-idempotency-key-0001"},
+    )
     assert response.status_code == 501
-    assert 'mock' in response.text.lower() or 'mapping' in response.text.lower()
+    assert "mock" in response.text.lower() or "mapping" in response.text.lower()
 
 
 def test_catalog_idempotency_replays_same_payload_and_rejects_conflicts():
     class CatalogClient:
         def __init__(self):
             self.calls = 0
-        async def invoke_catalog_service(self, service_id, payload):
+
+        async def invoke_catalog_service(self, service_id, payload, retry_auth=True):
             self.calls += 1
             return {"service": service_id, "accepted": True}
+
         async def aclose(self):
             return None
 
     fake = CatalogClient()
-    app = create_app(Settings(mock=False, proxy_api_keys=("test-key",), pin_key="consumer", pin_secret="secret"), client=fake)
+    app = create_app(
+        Settings(mock=False, proxy_api_keys=("test-key",), pin_key="consumer", pin_secret="secret"),
+        client=fake,
+    )
     headers = {**KEY, "Idempotency-Key": "idempotency-test-0001"}
     with TestClient(app) as c:
-        first = c.post("/v1/kra/nil-return-filing", json={"consent": True, "payload": {"period": "2026"}}, headers=headers)
-        replay = c.post("/v1/kra/nil-return-filing", json={"consent": True, "payload": {"period": "2026"}}, headers=headers)
-        conflict = c.post("/v1/kra/nil-return-filing", json={"consent": True, "payload": {"period": "2025"}}, headers=headers)
+        first = c.post(
+            "/v1/kra/nil-return-filing",
+            json={"consent": True, "payload": {"period": "2026"}},
+            headers=headers,
+        )
+        replay = c.post(
+            "/v1/kra/nil-return-filing",
+            json={"consent": True, "payload": {"period": "2026"}},
+            headers=headers,
+        )
+        conflict = c.post(
+            "/v1/kra/nil-return-filing",
+            json={"consent": True, "payload": {"period": "2025"}},
+            headers=headers,
+        )
     assert first.status_code == replay.status_code == 200
     assert conflict.status_code == 409
+    assert fake.calls == 1
+
+
+def test_production_requires_shared_idempotency_store():
+    with pytest.raises(ConfigError, match="IDEMPOTENCY_REDIS_URL"):
+        validate_settings(
+            Settings(
+                environment="production",
+                pin_key="consumer",
+                pin_secret="secret",
+                proxy_api_keys=("production-key",),
+            )
+        )
+
+
+def test_production_accepts_configured_shared_idempotency_store():
+    validate_settings(
+        Settings(
+            environment="production",
+            pin_key="consumer",
+            pin_secret="secret",
+            proxy_api_keys=("production-key",),
+            idempotency_redis_url="rediss://redis.example.invalid:6379/0",
+            idempotency_encryption_key="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+        )
+    )
+
+
+def test_production_requires_idempotency_encryption_key():
+    with pytest.raises(ConfigError, match="IDEMPOTENCY_ENCRYPTION_KEY"):
+        validate_settings(
+            Settings(
+                environment="production",
+                pin_key="consumer",
+                pin_secret="secret",
+                proxy_api_keys=("production-key",),
+                idempotency_redis_url="rediss://redis.example.invalid:6379/0",
+            )
+        )
+
+
+def test_readiness_endpoint_checks_security_store():
+    with TestClient(make_app()) as c:
+        response = c.get("/ready")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ready"}
+
+
+def test_non_finite_upstream_timeout_is_rejected():
+    with pytest.raises(ConfigError, match="KRA_TIMEOUT_SECONDS"):
+        validate_settings(Settings(mock=True, proxy_api_keys=("test-key",), timeout_seconds=float("nan")))
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        KraError(504, "upstream_timeout", "KRA timed out"),
+        KraError(502, "upstream_unreachable", "KRA connection failed"),
+        KraError(502, "kra_upstream_error", "KRA returned an upstream error"),
+        KraError(502, "unexpected_response", "KRA response was malformed"),
+    ],
+)
+def test_ambiguous_catalog_mutation_outcome_is_never_resubmitted(error):
+    class AmbiguousCatalogClient:
+        def __init__(self):
+            self.calls = 0
+
+        async def invoke_catalog_service(self, service_id, payload, retry_auth=True):
+            self.calls += 1
+            raise error
+
+        async def aclose(self):
+            return None
+
+    fake = AmbiguousCatalogClient()
+    app = create_app(
+        Settings(mock=False, proxy_api_keys=("test-key",), pin_key="consumer", pin_secret="secret"),
+        client=fake,
+    )
+    headers = {**KEY, "Idempotency-Key": "ambiguous-mutation-0001"}
+    with TestClient(app) as c:
+        first = c.post(
+            "/v1/kra/nil-return-filing",
+            json={"consent": True, "payload": {"period": "2026"}},
+            headers=headers,
+        )
+        replay = c.post(
+            "/v1/kra/nil-return-filing",
+            json={"consent": True, "payload": {"period": "2026"}},
+            headers=headers,
+        )
+    assert first.status_code in (502, 504)
+    assert replay.status_code == 409
+    assert "outcome is unknown" in replay.json()["detail"]
+    assert fake.calls == 1
+
+
+def test_unexpected_failure_after_mutation_starts_is_marked_unknown():
+    class CrashingCatalogClient:
+        def __init__(self):
+            self.calls = 0
+
+        async def invoke_catalog_service(self, service_id, payload, retry_auth=True):
+            self.calls += 1
+            raise RuntimeError("simulated post-send failure")
+
+        async def aclose(self):
+            return None
+
+    fake = CrashingCatalogClient()
+    app = create_app(
+        Settings(mock=False, proxy_api_keys=("test-key",), pin_key="consumer", pin_secret="secret"),
+        client=fake,
+    )
+    headers = {**KEY, "Idempotency-Key": "unexpected-failure-0001"}
+    with TestClient(app, raise_server_exceptions=False) as c:
+        first = c.post(
+            "/v1/kra/nil-return-filing",
+            json={"consent": True, "payload": {"period": "2026"}},
+            headers=headers,
+        )
+        replay = c.post(
+            "/v1/kra/nil-return-filing",
+            json={"consent": True, "payload": {"period": "2026"}},
+            headers=headers,
+        )
+    assert first.status_code == 500
+    assert replay.status_code == 409
+    assert "outcome is unknown" in replay.json()["detail"]
+    assert fake.calls == 1
+
+
+def test_definitive_upstream_rejection_releases_mutation_reservation():
+    class RejectingCatalogClient:
+        def __init__(self):
+            self.calls = 0
+
+        async def invoke_catalog_service(self, service_id, payload, retry_auth=True):
+            self.calls += 1
+            raise KraError(422, "invalid_payload", "KRA rejected the request")
+
+        async def aclose(self):
+            return None
+
+    fake = RejectingCatalogClient()
+    app = create_app(
+        Settings(mock=False, proxy_api_keys=("test-key",), pin_key="consumer", pin_secret="secret"),
+        client=fake,
+    )
+    headers = {**KEY, "Idempotency-Key": "definitive-rejection-0001"}
+    with TestClient(app) as c:
+        first = c.post(
+            "/v1/kra/nil-return-filing",
+            json={"consent": True, "payload": {"period": "invalid"}},
+            headers=headers,
+        )
+        second = c.post(
+            "/v1/kra/nil-return-filing",
+            json={"consent": True, "payload": {"period": "invalid"}},
+            headers=headers,
+        )
+    assert first.status_code == second.status_code == 422
+    assert fake.calls == 2
+
+
+def test_mutating_catalog_operation_does_not_replay_after_401():
+    class CatalogClient:
+        def __init__(self):
+            self.retry_auth = None
+
+        async def invoke_catalog_service(self, service_id, payload, retry_auth=True):
+            self.retry_auth = retry_auth
+            return {"accepted": True}
+
+        async def aclose(self):
+            return None
+
+    fake = CatalogClient()
+    app = create_app(
+        Settings(mock=False, proxy_api_keys=("test-key",), pin_key="consumer", pin_secret="secret"),
+        client=fake,
+    )
+    with TestClient(app) as c:
+        response = c.post(
+            "/v1/kra/nil-return-filing",
+            json={"consent": True, "payload": {"period": "2026"}},
+            headers={**KEY, "Idempotency-Key": "no-auth-replay-0001"},
+        )
+    assert response.status_code == 200
+    assert fake.retry_auth is False
+
+
+def test_mutating_direct_oscu_operation_does_not_replay_after_401():
+    class OscuClient:
+        def __init__(self):
+            self.retry_auth = None
+
+        def operation(self, operation_id):
+            return {"id": operation_id, "mutates": True}
+
+        async def invoke(self, operation_id, payload, tenant_headers, retry_auth=True):
+            self.retry_auth = retry_auth
+            return {"operation": operation_id, "data": {"accepted": True}}
+
+        async def aclose(self):
+            return None
+
+    fake = OscuClient()
+    app = create_app(
+        Settings(mock=False, proxy_api_keys=("test-key",), pin_key="consumer", pin_secret="secret"),
+        oscu_client=fake,
+    )
+    with TestClient(app) as c:
+        response = c.post(
+            "/v1/etims/oscu/mutating-operation",
+            json={"consent": True, "payload": {"invoice": "test"}},
+            headers={**KEY, "Idempotency-Key": "no-oscu-auth-replay-0001"},
+        )
+    assert response.status_code == 200
+    assert fake.retry_auth is False
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        KraError(504, "oscu_outcome_unknown", "OSCU timed out"),
+        KraError(502, "oscu_upstream_unreachable", "OSCU connection failed"),
+        KraError(502, "oscu_upstream_error", "OSCU upstream error"),
+        KraError(502, "oscu_unexpected_response", "OSCU response malformed"),
+    ],
+)
+def test_ambiguous_oscu_mutation_outcome_is_never_resubmitted(error):
+    class FailingOscuClient:
+        def __init__(self):
+            self.calls = 0
+
+        def operation(self, operation_id):
+            return {"id": operation_id, "mutates": True}
+
+        async def invoke(self, operation_id, payload, tenant_headers, retry_auth=True):
+            self.calls += 1
+            raise error
+
+        async def aclose(self):
+            return None
+
+    fake = FailingOscuClient()
+    app = create_app(
+        Settings(mock=False, proxy_api_keys=("test-key",), pin_key="consumer", pin_secret="secret"),
+        oscu_client=fake,
+    )
+    headers = {
+        **KEY,
+        "Idempotency-Key": "oscu-ambiguous-mutation-0001",
+        "X-ETIMS-TIN": "TEST-TIN",
+        "X-ETIMS-BHF-ID": "00",
+    }
+    payload = {"consent": True, "payload": {"invoice": "test"}}
+    with TestClient(app) as c:
+        first = c.post("/v1/etims/oscu/mutating-operation", json=payload, headers=headers)
+        replay = c.post("/v1/etims/oscu/mutating-operation", json=payload, headers=headers)
+    assert first.status_code in (502, 504)
+    assert replay.status_code == 409
+    assert "outcome is unknown" in replay.json()["detail"]
     assert fake.calls == 1

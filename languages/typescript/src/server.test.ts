@@ -1,18 +1,32 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import type { Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
 
 process.env.PROXY_API_KEYS = 'ci-test-key';
 process.env.KRA_MOCK = 'true';
 process.env.KRA_ENVIRONMENT = 'sandbox';
 process.env.REQUIRE_CONSENT = 'true';
 
-let server, services, base;
+let server: Server | undefined;
+let services: Record<string, boolean>;
+let base: string;
 before(async () => {
-  ({ server, services } = await import('./server.js'));
-  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-  base = `http://127.0.0.1:${server.address().port}`;
+  const module = await import('./server.js');
+  server = module.server;
+  services = module.services;
+  await new Promise<void>(resolve => server!.listen(0, '127.0.0.1', resolve));
+  const address = server!.address();
+  assert(address && typeof address !== 'string');
+  base = `http://127.0.0.1:${(address as AddressInfo).port}`;
 });
-after(async () => { if (server?.listening) await new Promise((resolve, reject) => server.close(e => e ? reject(e) : resolve())); });
+after(async () => {
+  if (server?.listening) {
+    await new Promise<void>((resolve, reject) =>
+      server!.close(e => e ? reject(e) : resolve())
+    );
+  }
+});
 
 const headers = { 'content-type': 'application/json', 'x-api-key': 'ci-test-key' };
 test('TypeScript catalog contains exactly 22 services', () => assert.equal(Object.keys(services).length, 22));
