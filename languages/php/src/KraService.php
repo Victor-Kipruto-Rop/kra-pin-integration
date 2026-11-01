@@ -47,7 +47,7 @@ final class KraService {
   if(!is_array($parts)||($parts['scheme']??'')!=='https'||!str_ends_with((string)($parts['host']??''),'.kra.go.ke'))return [501,['error'=>['code'=>'service_base_not_configured','message'=>'Set a verified HTTPS KRA base URL for this service']]];
   $access=$this->token($key,$secret);
   [$status,$data]=$this->request(rtrim($upstreamBase,'/').$path,['Authorization: Bearer '.$access],$payload,$method);
-  if($status===401&&!$mutating){$access=$this->token($key,$secret,true);[$status,$data]=$this->request(rtrim($upstreamBase,'/').$path,['Authorization: Bearer '.$access],$payload,$method);}
+  if($status===401){if($mutating){$this->token($key,$secret,true);}else{$access=$this->token($key,$secret,true);[$status,$data]=$this->request(rtrim($upstreamBase,'/').$path,['Authorization: Bearer '.$access],$payload,$method);}}
   if($status>=400)return [$status===429?429:502,['error'=>['code'=>'kra_upstream_error','message'=>'KRA service request failed']]];
   return [200,$data];
  }
