@@ -22,6 +22,24 @@ The script installs the declared test dependencies and runs, in order:
 8. Ruby/RSpec tests and Ruby syntax checks.
 9. Docker Compose configuration validation when Docker is installed.
 
+### Windows (PowerShell + Git Bash)
+
+Use Git Bash rather than invoking the script through PowerShell or a WSL shell with an unrelated mount/line-ending setup. From PowerShell:
+
+```powershell
+$gitBash = "C:\Program Files\Git\bin\bash.exe"
+& $gitBash --version
+& $gitBash -c 'bash scripts/ci-local.sh --validation-only'
+```
+
+The repository `.gitattributes` keeps shell and CI files on LF line endings. If an older checkout still has CRLF in a script after pulling this change, refresh that working-tree file from Git:
+
+```powershell
+git checkout -- scripts/ci-local.sh
+```
+
+If Python is installed from python.org but Git Bash resolves `python3` to the Microsoft Store execution alias, prepend a directory containing a `python3` symlink to the installed `python.exe` for that Git Bash session, or disable the Windows Python execution alias and ensure the Python install directory is on PATH. Do not modify project scripts to work around a machine-specific PATH issue.
+
 Use `bash scripts/ci-local.sh --skip-install` when dependencies are already installed. Use `bash scripts/ci-local.sh --validation-only` for static contract and syntax checks only; this is not a substitute for the full matrix.
 
 Equivalent Make targets are available:
