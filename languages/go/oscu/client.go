@@ -78,6 +78,7 @@ func (c *Client) tokenValue(ctx context.Context) (string, error) {
 	resp, err := c.http.Do(req)
 	if err != nil { return "", &OscuError{Code: "oscu_auth_failed", Message: "Could not obtain KRA OSCU access token"} }
 	defer resp.Body.Close()
+	if resp.StatusCode == 401 { c.mu.Lock(); c.token = ""; c.tokenExpires = time.Time{}; c.mu.Unlock() }
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return "", &OscuError{Code: "oscu_auth_failed", Message: "KRA rejected OSCU token request"}
 	}
