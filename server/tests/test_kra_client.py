@@ -130,3 +130,23 @@ async def test_unexpected_shape_is_reported_not_guessed():
         await client.check_pin("A000000010Z")
     assert exc.value.code == "unexpected_response" and exc.value.payload == {"hello": "world"}
     await client.aclose()
+
+
+async def test_mutating_catalog_401_is_not_replayed_when_disabled(monkeypatch):
+    monkeypatch.setenv("KRA_SERVICE_PATHS_JSON", '{"nil-return-filing":"/filing"}')
+    calls = []
+
+    def handler(request):
+        if request.url.path == "/v1/token/generate":
+            return httpx.Response(200, json={"access_token": "token", "expires_in": 3600})
+        calls.append(request)
+        return httpx.Response(401, json={"error": "unauthorized"})
+
+    client = make(handler)
+    try:
+        with pytest.raises(KraError) as error:
+            await client.invoke_catalog_service("nil-return-filing", {"period": "2026"}, retry_auth=False)
+        assert error.value.code == "kra_upstream_error"
+        assert len(calls) == 1
+    finally:
+        await client.aclose()
