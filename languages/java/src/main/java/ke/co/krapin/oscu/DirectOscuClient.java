@@ -87,6 +87,7 @@ public final class DirectOscuClient {
             if (operation.path("mutates").asBoolean()) throw new UnknownOutcomeException();
             throw ex;
         }
+        if (response.statusCode() == 401) { synchronized (this) { accessToken = null; tokenExpiresAt = Instant.EPOCH; } }
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             if (operation.path("mutates").asBoolean() && response.statusCode() >= 500) {
                 throw new UnknownOutcomeException();
