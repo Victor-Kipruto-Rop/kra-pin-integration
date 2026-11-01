@@ -57,3 +57,12 @@ A successful mock response is not proof of upstream connectivity. This status fi
 The direct OSCU protocol is a separate integration surface from the 22-service GavaConnect dispatcher. The feature branch now includes server-side clients in Python, Go, Java, JavaScript, TypeScript, PHP and Ruby. Each loads a packaged copy of the canonical 23-operation manifest; the contract validator checks parity for all copies and the OpenAPI document. Each client uses the fixed KRA sandbox host, HTTP Basic token acquisition, bearer authentication, required tenant context, explicit confirmation for provisionally mutating operations and no automatic mutation retries. These SDKs remain unverified against live KRA credentials and do not imply certification.
 
 The Python FastAPI adapter additionally uses Redis-backed distributed rate limiting and idempotency when configured. Completed response bodies are encrypted using the configured Fernet key. Other independent GavaConnect server implementations still require shared state/gateway enforcement before multi-replica production.
+
+
+## Catalog mutation retry and idempotency safeguards
+
+- Python, Go, Java, JavaScript, TypeScript, PHP and Ruby catalog dispatchers now avoid automatic 401 replay for mutating services.
+- Mutating requests with idempotency keys reserve a pending state before upstream submission. Duplicate in-flight requests are blocked; completed requests replay their cached response; ambiguous transport failures, 5xx responses and malformed responses are held as unknown outcomes and require reconciliation.
+- Definitive non-5xx upstream rejections release the reservation where the implementation can identify the upstream status. Some language adapters conservatively retain an unknown state for errors whose pre-send versus post-send phase cannot be reliably distinguished.
+- This is process-local state in most language templates; PHP uses a local filesystem lock/state file. These mechanisms prevent common same-process duplicate submissions but are **not** a substitute for a shared durable idempotency store across replicas or hosts.
+- Python FastAPI remains the reference implementation for Redis-backed cross-worker state and encrypted completed-response caching. All language implementations still require test execution and independent review before production.
