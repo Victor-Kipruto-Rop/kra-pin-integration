@@ -107,6 +107,7 @@ export class DirectOscuClient {
         operation.mutates,
       );
     }
+    if (response.status === 401) { this.accessToken = undefined; this.tokenExpiresAt = 0; }
     if (!response.ok) {
       if (operation.mutates && response.status >= 500) {
         throw new OscuError('oscu_outcome_unknown', 'KRA OSCU returned a server error; reconcile before resubmitting', true);
