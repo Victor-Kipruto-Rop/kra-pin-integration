@@ -60,6 +60,10 @@ module KraPin
         end
         raise OscuError.new('oscu_upstream_unreachable', 'Could not reach KRA OSCU'), cause: error
       end
+      if response[:status] == 401
+        @access_token = nil
+        @token_expires_at = 0
+      end
       unless response[:status].between?(200, 299)
         if operation.fetch('mutates') && response[:status] >= 500
           raise OscuError.new('oscu_outcome_unknown', 'KRA OSCU returned a server error; reconcile before resubmitting', outcome_unknown: true)
