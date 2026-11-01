@@ -4,6 +4,7 @@ This client is deliberately separate from the GavaConnect catalog client. The
 provided collection documents sandbox only; production is disabled until KRA
 provides an approved production host and credentials.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -26,7 +27,9 @@ class DirectOscuClient:
         if settings.environment != "sandbox":
             raise ValueError("Direct OSCU is sandbox-only until KRA supplies production details")
         self._settings = settings
-        self._http = httpx.AsyncClient(base_url=TOKEN_HOST, timeout=settings.timeout_seconds, transport=transport)
+        self._http = httpx.AsyncClient(
+            base_url=TOKEN_HOST, timeout=settings.timeout_seconds, transport=transport
+        )
         self._tokens: tuple[str, float] | None = None
         self._token_lock = asyncio.Lock()
         manifest_path = Path(__file__).with_name("etims_oscu_endpoints.json")
@@ -52,11 +55,15 @@ class DirectOscuClient:
             except httpx.TimeoutException as exc:
                 raise KraError(504, "oscu_token_timeout", "KRA OSCU token endpoint timed out") from exc
             except httpx.HTTPError as exc:
-                raise KraError(502, "oscu_token_unreachable", "Could not reach KRA OSCU token endpoint") from exc
+                raise KraError(
+                    502, "oscu_token_unreachable", "Could not reach KRA OSCU token endpoint"
+                ) from exc
             if response.status_code in (400, 401, 403):
                 raise KraError(502, "oscu_auth_failed", "KRA rejected the configured OSCU credentials")
             if response.status_code >= 400:
-                raise KraError(502, "oscu_token_error", f"KRA OSCU token endpoint returned HTTP {response.status_code}")
+                raise KraError(
+                    502, "oscu_token_error", f"KRA OSCU token endpoint returned HTTP {response.status_code}"
+                )
             try:
                 body = response.json()
                 token = body["access_token"]
@@ -64,7 +71,9 @@ class DirectOscuClient:
                 if not isinstance(token, str) or not token or ttl <= 0:
                     raise ValueError("invalid token response")
             except (ValueError, KeyError, TypeError) as exc:
-                raise KraError(502, "oscu_token_unexpected_response", "Malformed KRA OSCU token response") from exc
+                raise KraError(
+                    502, "oscu_token_unexpected_response", "Malformed KRA OSCU token response"
+                ) from exc
             self._tokens = (token, time.monotonic() + ttl)
             return token
 
@@ -99,7 +108,11 @@ class DirectOscuClient:
             )
         except httpx.TimeoutException as exc:
             # A timeout on a write can leave the remote outcome unknown. Never retry it here.
-            raise KraError(504, "oscu_outcome_unknown", "KRA OSCU request timed out; check the transaction state before resubmitting") from exc
+            raise KraError(
+                504,
+                "oscu_outcome_unknown",
+                "KRA OSCU request timed out; check the transaction state before resubmitting",
+            ) from exc
         except httpx.HTTPError as exc:
             raise KraError(502, "oscu_upstream_unreachable", "Could not reach KRA OSCU API") from exc
 
@@ -127,5 +140,7 @@ class DirectOscuClient:
                 ) from exc
         if response.status_code >= 400:
             # Do not relay untrusted upstream error content or taxpayer data.
-            raise KraError(422, "oscu_request_rejected", f"KRA OSCU rejected the request (HTTP {response.status_code})")
+            raise KraError(
+                422, "oscu_request_rejected", f"KRA OSCU rejected the request (HTTP {response.status_code})"
+            )
         return {"operation": operation_id, "environment": "sandbox", "data": data}

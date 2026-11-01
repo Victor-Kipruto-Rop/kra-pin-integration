@@ -15,7 +15,13 @@ def test_evidence_contains_hashes_and_shape_but_not_sensitive_values():
         timestamp="2026-11-01T00:00:00+00:00",
     )
     serialized = str(evidence)
-    for secret in ("Example Person", "A123456789Z", "do-not-store", "private taxpayer result", "branch-secret"):
+    for secret in (
+        "Example Person",
+        "A123456789Z",
+        "do-not-store",
+        "private taxpayer result",
+        "branch-secret",
+    ):
         assert secret not in serialized
     assert evidence["request"]["payload_sha256"]
     assert evidence["response"]["sha256"]

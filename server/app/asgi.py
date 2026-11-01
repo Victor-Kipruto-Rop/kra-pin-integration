@@ -1,4 +1,5 @@
 """Entry point: `uvicorn app.asgi:app`. Fails fast on unsafe configuration."""
+
 import logging
 
 from .main import create_app

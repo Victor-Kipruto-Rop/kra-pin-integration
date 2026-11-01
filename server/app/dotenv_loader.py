@@ -3,12 +3,13 @@
 Only KEY=VALUE assignments are accepted. Values are never expanded or evaluated.
 Existing process environment values always take precedence.
 """
+
 from __future__ import annotations
 
 import os
 import re
+from collections.abc import MutableMapping
 from pathlib import Path
-from typing import MutableMapping
 
 _KEY = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 

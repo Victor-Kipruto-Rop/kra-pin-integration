@@ -4,7 +4,6 @@ from pathlib import Path
 
 from cryptography.fernet import Fernet
 
-
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts" / "validate-production-config.py"
 SPEC = importlib.util.spec_from_file_location("production_preflight", SCRIPT)

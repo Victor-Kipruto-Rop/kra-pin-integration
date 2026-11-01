@@ -9,9 +9,7 @@ class RateLimiter:
     """Sliding-window limiter. In-memory, so per-process: use a shared store
     (e.g. Redis) or your gateway's limiter if you run several instances."""
 
-    def __init__(
-        self, limit: int, window_seconds: float = 60.0, clock: Callable[[], float] = time.monotonic
-    ):
+    def __init__(self, limit: int, window_seconds: float = 60.0, clock: Callable[[], float] = time.monotonic):
         self.limit = limit
         self.window = window_seconds
         self._clock = clock

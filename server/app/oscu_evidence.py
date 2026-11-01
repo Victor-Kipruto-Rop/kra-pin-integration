@@ -1,4 +1,5 @@
 """Helpers for producing privacy-preserving OSCU test evidence."""
+
 from __future__ import annotations
 
 import hashlib

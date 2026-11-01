@@ -3,6 +3,7 @@
 The success-response shape below ({"PINDATA": {...}}) is an ASSUMPTION based on
 public integrations; confirm it with scripts/probe_sandbox.py and update here.
 """
+
 import base64
 
 import httpx

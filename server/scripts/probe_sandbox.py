@@ -6,6 +6,7 @@ PR/issue with the output. It never prints taxpayer data.
     python -m scripts.probe_sandbox pin A000000010Z
     python -m scripts.probe_sandbox id 12345678
 """
+
 import asyncio
 import json
 import sys

@@ -4,6 +4,7 @@ Redis is required for production. Keys are hashed by the caller; payload
 fingerprints and cached response bodies are stored only in the protected
 Redis instance and expire after the configured retention window.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -14,26 +15,19 @@ from typing import Any, Protocol
 
 
 class Store(Protocol):
-    async def reserve(self, key: str, fingerprint: str) -> tuple[str, dict[str, Any] | None]:
-        ...
+    async def reserve(self, key: str, fingerprint: str) -> tuple[str, dict[str, Any] | None]: ...
 
-    async def allow_rate_limit(self, identity: str, limit: int, window_seconds: int = 60) -> bool:
-        ...
+    async def allow_rate_limit(self, identity: str, limit: int, window_seconds: int = 60) -> bool: ...
 
-    async def complete(self, key: str, fingerprint: str, response: dict[str, Any]) -> None:
-        ...
+    async def complete(self, key: str, fingerprint: str, response: dict[str, Any]) -> None: ...
 
-    async def mark_unknown(self, key: str, fingerprint: str) -> None:
-        ...
+    async def mark_unknown(self, key: str, fingerprint: str) -> None: ...
 
-    async def release(self, key: str, fingerprint: str) -> None:
-        ...
+    async def release(self, key: str, fingerprint: str) -> None: ...
 
-    async def ping(self) -> None:
-        ...
+    async def ping(self) -> None: ...
 
-    async def aclose(self) -> None:
-        ...
+    async def aclose(self) -> None: ...
 
 
 class MemoryIdempotencyStore:
@@ -153,9 +147,7 @@ class RedisIdempotencyStore:
         redis.call('PEXPIRE', KEYS[1], window_ms)
         return 1
         """
-        result = await self._redis.eval(
-            script, 1, f"kra:ratelimit:{identity}", window_ms, limit, member
-        )
+        result = await self._redis.eval(script, 1, f"kra:ratelimit:{identity}", window_ms, limit, member)
         return bool(result)
 
     async def complete(self, key: str, fingerprint: str, response: dict[str, Any]) -> None:

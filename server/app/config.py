@@ -1,4 +1,5 @@
 """Runtime configuration, read from environment variables."""
+
 from __future__ import annotations
 
 import math
@@ -119,7 +120,9 @@ def validate_settings(s: Settings) -> None:
     if s.environment == "production" and not s.idempotency_redis_url:
         problems.append("IDEMPOTENCY_REDIS_URL is required in production for cross-worker replay protection")
     if s.environment == "production" and not s.idempotency_encryption_key:
-        problems.append("IDEMPOTENCY_ENCRYPTION_KEY is required in production to encrypt cached KRA responses")
+        problems.append(
+            "IDEMPOTENCY_ENCRYPTION_KEY is required in production to encrypt cached KRA responses"
+        )
     if s.idempotency_redis_url:
         parsed_redis = urlparse(s.idempotency_redis_url)
         if parsed_redis.scheme not in {"redis", "rediss"} or not parsed_redis.hostname:
@@ -127,17 +130,26 @@ def validate_settings(s: Settings) -> None:
         if s.environment == "production" and parsed_redis.scheme != "rediss":
             problems.append("Production IDEMPOTENCY_REDIS_URL must use rediss:// TLS")
         if not s.idempotency_encryption_key:
-            problems.append("IDEMPOTENCY_ENCRYPTION_KEY is required when Redis idempotency storage is enabled")
+            problems.append(
+                "IDEMPOTENCY_ENCRYPTION_KEY is required when Redis idempotency storage is enabled"
+            )
         else:
             try:
                 from cryptography.fernet import Fernet
+
                 Fernet(s.idempotency_encryption_key.encode("ascii"))
             except (ValueError, UnicodeEncodeError):
                 problems.append("IDEMPOTENCY_ENCRYPTION_KEY must be a valid Fernet key")
     if s.etims_oscu_enabled:
         if s.environment != "sandbox":
-            problems.append("Direct eTIMS OSCU is sandbox-only until KRA provides production endpoint details and approval")
+            problems.append(
+                "Direct eTIMS OSCU is sandbox-only until KRA provides production endpoint "
+                "details and approval"
+            )
         if not (s.etims_oscu_consumer_key and s.etims_oscu_consumer_secret and s.etims_oscu_app_id):
-            problems.append("ETIMS_OSCU_CONSUMER_KEY, ETIMS_OSCU_CONSUMER_SECRET and ETIMS_OSCU_APP_ID are required when ETIMS_OSCU_ENABLED=true")
+            problems.append(
+                "ETIMS_OSCU_CONSUMER_KEY, ETIMS_OSCU_CONSUMER_SECRET and ETIMS_OSCU_APP_ID "
+                "are required when ETIMS_OSCU_ENABLED=true"
+            )
     if problems:
         raise ConfigError("; ".join(problems))

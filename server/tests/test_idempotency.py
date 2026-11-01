@@ -44,21 +44,27 @@ def test_unknown_outcome_is_fail_closed_and_release_only_removes_pending():
 
     asyncio.run(scenario())
 
+
 def test_redis_store_encrypts_cached_response_and_replays_safely():
     import json
+
     from cryptography.fernet import Fernet
+
     from app.idempotency import RedisIdempotencyStore
 
     class FakeRedis:
         def __init__(self):
             self.values = {}
+
         async def set(self, key, value, ex=None, nx=False):
             if nx and key in self.values:
                 return False
             self.values[key] = value
             return True
+
         async def get(self, key):
             return self.values.get(key)
+
         async def eval(self, script, count, key, *args):
             raw = self.values.get(key)
             if raw is None:
@@ -74,8 +80,10 @@ def test_redis_store_encrypts_cached_response_and_replays_safely():
                 return 0
             self.values[key] = args[1]
             return 1
+
         async def ping(self):
             return True
+
         async def aclose(self):
             return None
 
@@ -122,6 +130,7 @@ def test_memory_rate_limit_is_shared_with_idempotency_store():
 
     asyncio.run(scenario())
 
+
 def test_redis_rate_limit_uses_atomic_server_clock_window():
     from app.idempotency import RedisIdempotencyStore
 
@@ -129,14 +138,19 @@ def test_redis_rate_limit_uses_atomic_server_clock_window():
         def __init__(self):
             self.now = 120_000
             self.hits = {}
+
         async def eval(self, script, key_count, key, window_ms, limit, member):
             assert "redis.call('TIME')" in script
             recent = [stamp for stamp, _ in self.hits.get(key, []) if self.now - stamp < int(window_ms)]
             if len(recent) >= int(limit):
-                self.hits[key] = [(stamp, item) for stamp, item in self.hits[key] if self.now - stamp < int(window_ms)]
+                self.hits[key] = [
+                    (stamp, item) for stamp, item in self.hits[key] if self.now - stamp < int(window_ms)
+                ]
                 return 0
             recent.append(self.now)
-            self.hits[key] = [(stamp, item) for stamp, item in self.hits.get(key, []) if self.now - stamp < int(window_ms)] + [(self.now, member)]
+            self.hits[key] = [
+                (stamp, item) for stamp, item in self.hits.get(key, []) if self.now - stamp < int(window_ms)
+            ] + [(self.now, member)]
             return 1
 
     async def scenario():
