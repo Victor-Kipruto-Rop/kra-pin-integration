@@ -13,7 +13,7 @@ test('ambiguous catalog mutation outcome blocks a duplicate submission', async (
   process.env.KRA_PIN_CONSUMER_SECRET = 'secret';
   process.env.KRA_SERVICE_PATHS_JSON = JSON.stringify({ 'nil-return-filing': '/filing' });
   process.env.KRA_SERVICE_METHODS_JSON = '{}';
-  globalThis.fetch = (async input => {
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
     if (String(input).includes('/v1/token/generate')) {
       return new Response(JSON.stringify({ access_token: 'token', expires_in: 3600 }), { status: 200 });
     }
