@@ -103,12 +103,13 @@ class DirectOscuClient:
         except httpx.HTTPError as exc:
             raise KraError(502, "oscu_upstream_unreachable", "Could not reach KRA OSCU API") from exc
 
-        if response.status_code == 401 and retry_auth and not operation.get("mutates", False):
-            # Replaying a mutation after 401 is unsafe unless KRA explicitly
-            # guarantees the rejected request could not have been processed.
+        if response.status_code == 401:
             self._tokens = None
-            await self._access_token(force_refresh=True)
-            return await self.invoke(operation_id, payload, tenant_headers, retry_auth=False)
+            if retry_auth and not operation.get("mutates", False):
+                # Replaying a mutation after 401 is unsafe unless KRA explicitly
+                # guarantees the rejected request could not have been processed.
+                await self._access_token(force_refresh=True)
+                return await self.invoke(operation_id, payload, tenant_headers, retry_auth=False)
         if response.status_code == 401:
             raise KraError(502, "oscu_auth_failed", "KRA OSCU rejected the access token")
         if response.status_code == 429:
