@@ -79,7 +79,7 @@ class KraPinApp
     access=token(ck,cs)
     submitted=true
     response=upstream_request(method,upstream_base,upstream_path,body['payload'],access)
-    if response.code.to_i==401&&!mutates;@cache.delete(ck);access=token(ck,cs);submitted=true;response=upstream_request(method,upstream_base,upstream_path,body['payload'],access);end
+    if response.code.to_i==401;@cache.delete(ck);unless mutates;access=token(ck,cs);submitted=true;response=upstream_request(method,upstream_base,upstream_path,body['payload'],access);end;end
     data=JSON.parse(response.body.empty? ? '{}' : response.body)
     unless response.is_a?(Net::HTTPSuccess)
      if ik
