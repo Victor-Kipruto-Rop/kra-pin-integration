@@ -15,7 +15,7 @@ The following is an honest implementation inventory, not a claim that all runtim
 | In-memory token cache | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | Rate limiting | In-memory | In-memory | In-memory | In-memory | In-memory | Local file lock | In-memory |
 | Upstream timeout configured | Yes | 15s client | 5s connect / 15s read | 15s | 15s | 15s cURL | 5s connect / 15s read |
-| Catalog dispatcher 401 token refresh/retry | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Catalog dispatcher 401 handling | Read-only retry only; no mutation replay | Same | Same | Same | Same | Same | Same |
 | GET query / POST JSON upstream forwarding | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | Canonical payload fingerprint for idempotency | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | Idempotency payload conflict response (409) | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
