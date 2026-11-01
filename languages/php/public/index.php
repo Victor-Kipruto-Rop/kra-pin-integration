@@ -30,11 +30,12 @@ if($isCatalog){
  if($idemKey!==''){
   $idemFile=sys_get_temp_dir().'/kra-idem-'.$idemKey;$idemHandle=fopen($idemFile,'c+');if($idemHandle===false){http_response_code(503);echo json_encode(['detail'=>'Idempotency store unavailable']);exit;}
   flock($idemHandle,LOCK_EX);$cachedRaw=stream_get_contents($idemHandle);$cached=$cachedRaw!==''?json_decode($cachedRaw,true):null;
+  if($cachedRaw!==''&&!is_array($cached)){flock($idemHandle,LOCK_UN);fclose($idemHandle);http_response_code(503);echo json_encode(['detail'=>'Idempotency state is unreadable; reconcile before retrying']);exit;}
   if(is_array($cached)){
    if(($cached['fingerprint']??null)!==$fingerprint){flock($idemHandle,LOCK_UN);fclose($idemHandle);http_response_code(409);echo json_encode(['error'=>['code'=>'idempotency_conflict','message'=>'Idempotency-Key was already used with a different payload']]);exit;}
    $state=$cached['state']??'complete';
    if($state==='complete'){flock($idemHandle,LOCK_UN);fclose($idemHandle);echo json_encode($cached['data']??[]);exit;}
-   if($state==='unknown'||$state==='pending'){flock($idemHandle,LOCK_UN);fclose($idemHandle);http_response_code(409);echo json_encode(['error'=>['code'=>'idempotency_outcome_unknown','message'=>'Previous request outcome is unknown; reconcile with KRA before retrying']]);exit;}
+   if($state!=='complete'){flock($idemHandle,LOCK_UN);fclose($idemHandle);http_response_code(409);echo json_encode(['error'=>['code'=>'idempotency_outcome_unknown','message'=>'Previous request outcome is unknown; reconcile with KRA before retrying']]);exit;}
   }
   ftruncate($idemHandle,0);rewind($idemHandle);fwrite($idemHandle,json_encode(['fingerprint'=>$fingerprint,'state'=>'pending'],JSON_THROW_ON_ERROR));fflush($idemHandle);
  }
