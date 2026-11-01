@@ -60,6 +60,7 @@ final class DirectOscuClient
             }
             throw new RuntimeException('Could not reach KRA OSCU', 0, $error);
         }
+        if ($response['status'] === 401) { $this->accessToken = null; $this->tokenExpiresAt = 0; }
         if ($response['status'] < 200 || $response['status'] >= 300) {
             if (($operation['mutates'] ?? false) && $response['status'] >= 500) {
                 throw new OscuUnknownOutcomeException('KRA OSCU returned a server error; reconcile before resubmitting');
