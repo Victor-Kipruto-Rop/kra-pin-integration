@@ -24,3 +24,39 @@ RSpec.describe KraPinApp do
   expect(call.call('pin-checker-by-pin',JSON.generate(consent:true,payload:{})).first).to eq(501)
  end
 end
+
+
+RSpec.describe KraPinApp do
+ it 'blocks duplicate catalog mutations after an ambiguous upstream failure' do
+  previous_env=ENV.to_hash
+  begin
+   ENV['KRA_MOCK']='false'
+   ENV['KRA_ENVIRONMENT']='sandbox'
+   ENV['KRA_PIN_CONSUMER_KEY']='consumer'
+   ENV['KRA_PIN_CONSUMER_SECRET']='secret'
+   ENV['KRA_SERVICE_PATHS_JSON']=JSON.generate('nil-return-filing'=>'/filing')
+   ENV['KRA_SERVICE_METHODS_JSON']='{}'
+   app=KraPinApp.new
+   allow(app).to receive(:token).and_return('token')
+   response=Net::HTTPBadGateway.new('1.1','502','Bad Gateway')
+   response.instance_variable_set(:@body,'{"error":"temporary"}')
+   response.instance_variable_set(:@read,true)
+   expect(app).to receive(:upstream_request).once.and_return(response)
+   call=-> {
+    app.call({
+     'REQUEST_METHOD'=>'POST',
+     'PATH_INFO'=>'/v1/kra/nil-return-filing',
+     'HTTP_X_API_KEY'=>'ci-test-key',
+     'HTTP_IDEMPOTENCY_KEY'=>'ruby-mutation-unknown-001',
+     'rack.input'=>StringIO.new(JSON.generate(consent:true,payload:{period:'2026'}))
+    })
+   }
+   expect(call.call.first).to eq(502)
+   replay=call.call
+   expect(replay.first).to eq(409)
+   expect(replay.last.join).to include('idempotency_outcome_unknown')
+  ensure
+   ENV.replace(previous_env)
+  end
+ end
+end
