@@ -100,6 +100,8 @@ class DirectOscuClient:
                     outcome_unknown=True,
                 ) from exc
             raise OscuError("oscu_upstream_unreachable", "Could not reach KRA OSCU") from exc
+        if response.status_code == 401:
+            self._token = None
         if response.status_code >= 500 and operation["mutates"]:
             raise OscuError(
                 "oscu_outcome_unknown",
