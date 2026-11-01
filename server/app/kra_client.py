@@ -179,8 +179,9 @@ class KraClient:
             response = await send(token)
             if response.status_code == 401:
                 self._tokens.pop(credentials[0], None)
-                token = await self._token(*credentials)
-                response = await send(token)
+                if retry_auth:
+                    token = await self._token(*credentials)
+                    response = await send(token)
         except httpx.TimeoutException as exc:
             raise KraError(504, "upstream_timeout", "KRA service timed out") from exc
         except httpx.HTTPError as exc:
