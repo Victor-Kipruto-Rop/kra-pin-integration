@@ -4,7 +4,7 @@
 - Independent Go, Java/Spring Boot, JavaScript, TypeScript, PHP and Ruby service templates alongside the Python reference.
 - Shared OpenAPI contract and canonical 22-service catalog with stable service IDs and mutability metadata.
 - Generic POST /v1/kra/{service-id} dispatcher in Python, Go, Java, JavaScript, TypeScript, PHP and Ruby.
-- Configurable upstream path/method mappings (GET query forwarding and POST JSON forwarding), OAuth token handling, one-time 401 refresh/retry, consent enforcement and idempotency-key requirements for mutating operations.
+- Configurable upstream path/method mappings (GET query forwarding and POST JSON forwarding), OAuth token handling, read-only 401 refresh/retry (mutations are never automatically replayed), consent enforcement and idempotency-key requirements for mutating operations.
 - Same-process idempotency replay with canonical payload fingerprints and HTTP 409 on key reuse with a different payload.
 - Authorization endpoint keeps the KRA bearer token server-side and returns status metadata only.
 - Complete 21-service upstream mapping template, per-service contract-readiness register and fail-closed production configuration preflight.
